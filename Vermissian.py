@@ -7,7 +7,7 @@ from HeartCharacterSheet import HeartCharacter, HeartSkill, HeartDomain
 from Game import SpireGame, HeartGame
 from Roll import Roll
 from utils.google_sheets import get_sheet_name_from_gid, get_spreadsheet_id, get_spreadsheet_sheet_gid
-from utils.exceptions import NoSpreadsheetGidError, UnknownSystemError
+from utils.exceptions import NoSpreadsheetGidError, BadCharacterKeeperError, UnknownSystemError
 from System import System
 
 class Vermissian(discord.Bot):
@@ -21,7 +21,7 @@ class Vermissian(discord.Bot):
         spreadsheet_id = get_spreadsheet_id(spreadsheet_url)
 
         if spreadsheet_id is None:
-            raise NoSpreadsheetGidError(spreadsheet_url=spreadsheet_url)
+            raise BadCharacterKeeperError(spreadsheet_url=spreadsheet_url)
 
         game_data = {
             'guild_id': ctx.guild.id,

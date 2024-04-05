@@ -25,7 +25,7 @@ def get_spreadsheet_id(spreadsheet_url: str) -> Optional[str]:
 
     spreadsheet_id = None
     for idx, token in enumerate(tokens):
-        if token == 'd':
+        if token == 'd' and idx < len(tokens) - 1:
             spreadsheet_id = tokens[idx + 1]
             break
 

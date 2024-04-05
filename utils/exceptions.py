@@ -17,6 +17,10 @@ class NoCharacterError(VermissianError):
     def __init__(self, msg: str = 'You need to link yourself to a character before you can do that. Use /add_character', * args):
         super().__init__(msg, * args)
 
+class BadCharacterKeeperError(VermissianError):
+    def __init__(self, msg: str = 'The character keeper URL "{}" is not valid. It should look like "https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit#gid=0" (potentially with different spreadsheet ID and gid)', * args, spreadsheet_url: str):
+        super().__init__(msg.format(spreadsheet_url), * args)
+
 class NoSpreadsheetGidError(VermissianError):
     def __init__(self, msg: str = 'Cannot parse character sheet URL "{}" - no gid found. It should look like "https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit#gid=0" (potentially with different values)', * args, spreadsheet_url: str):
         super().__init__(msg.format(spreadsheet_url), * args)
