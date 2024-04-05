@@ -1,0 +1,6 @@
+servers
+credentials.json
+*.csv
+*.json
+client_secret_*
+*.log
