@@ -155,7 +155,7 @@ ichor-drowned is a product of Sillion L and Brandan McLeod, with whom I'm not af
 async def donate_command(
     ctx: discord.ApplicationContext,
 ):
-    await ctx.respond(f'You can find my Ko-Fi here: https://ko-fi.com/settings?tab=profile. All donations are really appreciated, thank you!')
+    await ctx.respond(f'You can find my Ko-Fi here: https://ko-fi.com/jaffa674059. All donations are really appreciated, thank you!')
 
 @vermissian.slash_command(name='suggest', description='Have a suggestion to improve the bot? Let me know!', guilds=[discord.Object(1218845257899446364), discord.Object(1193578278175375432)])
 @command_logging_decorator
