@@ -4,3 +4,4 @@ credentials.json
 *.json
 client_secret_*
 *.log
+.idea

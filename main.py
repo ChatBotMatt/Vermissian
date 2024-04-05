@@ -191,11 +191,11 @@ If you're wondering how I make money off of this, or if you're the product, then
 
 That being said, if you'd like to {code("/donate")} to me, it's always appreciated - "cheap" isn't "free" and I did put a lot of time and effort into the bot. 
 
-If you want to verify any of this, please check out the source code on GitHub: [To be filled in]
+If you want to verify any of this, please check out the source code on GitHub: https://github.com/ChatBotMatt/Vermissian
 
 The logging function is in utils/logger.py specifically, and you can look for anything using {code("get_logger()")}. 
 
-If you have any other questions or concerns, and {code("/help")} doesn't cover them, feel free to message me on Discord.''' # TODO Add GitHub link
+If you have any other questions or concerns, and {code("/help")} doesn't cover them, feel free to message me on Discord.'''
 
     await ctx.respond(message)
 
