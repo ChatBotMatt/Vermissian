@@ -130,33 +130,3 @@ def get_from_spreadsheet_api(spreadsheet_id: str, sheet_name: str, ranges_or_cel
         logger.error(h, exc_info=True)
 
         raise h
-
-def get_last_modified_time(spreadsheet_id: str) -> datetime.datetime:
-    key = get_key()
-
-    response = requests.get(f'https://www.googleapis.com/drive/v3/files/{spreadsheet_id}?key={key}&fields=modifiedTime')
-
-    if response.status_code == 403 and response.json()['error']['status'] == 'PERMISSION_DENIED':
-        raise ForbiddenSpreadsheetError(spreadsheet_id=spreadsheet_id)
-
-    response.raise_for_status()
-
-    raw_modified_datetime = response.json()['modifiedTime']
-
-    last_modified_datetime = isoparse(raw_modified_datetime)
-
-    return last_modified_datetime
-
-def main():
-    """
-    Shows basic usage of the Sheets API.
-    Prints values from a sample spreadsheet.
-    """
-
-    SPIRE_SPREADSHEET_ID = "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I"
-
-    for row in get_from_spreadsheet_api(spreadsheet_id=SPIRE_SPREADSHEET_ID, sheet_name='Example Character Sheet', ranges_or_cells='G10:H18')['values']:
-        print(row)
-
-if __name__ == "__main__":
-    main()

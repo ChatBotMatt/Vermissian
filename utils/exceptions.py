@@ -29,7 +29,6 @@ class UnknownSystemError(VermissianError):
     def __init__(self, msg: str = 'Unknown system: "{}". Valid systems are {}', * args, system: str):
         super().__init__(msg.format(system, list([sys.value for sys in System])), * args)
 
-
 class NoDiceError(VermissianError):
     """
     Represents someone trying to roll a non-positive number of dice.
