@@ -4,9 +4,12 @@ from unittest import mock
 
 import itertools
 import dataclasses
+import shutil
+import os
 from typing import List, Tuple
 
 from Game import HeartGame
+from CharacterSheet import HeartCharacter
 from utils.format import strikethrough, bold
 
 @dataclasses.dataclass
@@ -163,6 +166,8 @@ class TestHeartGame(unittest.TestCase):
                 character_data['sheet_name']
             )
 
+            self.assertTrue(loaded_character, HeartCharacter)
+
         for label, invalid_data in self.ALL_INVALID_DATA.items():
             with self.subTest(label):
                 self.assertRaises(
@@ -199,6 +204,13 @@ class TestHeartGame(unittest.TestCase):
             cls.ALL_INVALID_DATA[f'missing_{omit_field}'] = {
                 field: value for field, value in cls.HEART_GAME_DATA.items() if field != omit_field
             }
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        rm_path = HeartGame.get_server_dirpath(cls.HEART_GAME_DATA['guild_id'])
+
+        if os.path.isdir(rm_path):
+            shutil.rmtree(rm_path)
 
 if __name__ == '__main__':
     unittest.main()

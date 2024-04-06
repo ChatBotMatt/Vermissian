@@ -1,10 +1,7 @@
-import datetime
-
 import requests
 import json
 import re
 from urllib.parse import urlparse
-from dateutil.parser import isoparse
 import time
 from typing import List, Dict, Union, Optional
 
@@ -25,14 +22,15 @@ def get_spreadsheet_id(spreadsheet_url: str) -> Optional[str]:
 
     spreadsheet_id = None
     for idx, token in enumerate(tokens):
-        if token == 'd' and idx < len(tokens) - 1:
+        if token == 'd' and idx < len(tokens) - 1 and len(tokens[idx+1].strip()):
             spreadsheet_id = tokens[idx + 1]
+
             break
 
     return spreadsheet_id
 
 def get_spreadsheet_sheet_gid(spreadsheet_url: str) -> Optional[int]:
-    gid_match = re.search('gid=(\d+)', spreadsheet_url)
+    gid_match = re.search('gid=(\d+)$', spreadsheet_url)
 
     if gid_match is None:
         return None
@@ -56,10 +54,7 @@ def get_spreadsheet_metadata(spreadsheet_id: str) -> Dict[int, str]:
     try:
         response = requests.get(f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}?key={key}&fields=sheets.properties')
 
-        if response.status_code == 403 and response.json()['error']['status'] == 'PERMISSION_DENIED':
-            raise ForbiddenSpreadsheetError(spreadsheet_id=spreadsheet_id)
-
-        response.raise_for_status()
+        check_response(response, spreadsheet_id)
 
         return {
             sheet['properties']['sheetId']: sheet['properties']['title'] for sheet in response.json()['sheets']
@@ -70,14 +65,33 @@ def get_spreadsheet_metadata(spreadsheet_id: str) -> Dict[int, str]:
 
         raise h
 
+def check_response(response: requests.Response, spreadsheet_id: str):
+    if response.status_code == 403 and response.json()['error']['status'] == 'PERMISSION_DENIED':
+        raise ForbiddenSpreadsheetError(spreadsheet_id=spreadsheet_id)
+
+    response.raise_for_status()
+
 def get_from_spreadsheet_api(spreadsheet_id: str, sheet_name: str, ranges_or_cells: Union[str, List[str]]) -> Dict[str, Optional[Union[str, int, float]]]:
     logger = get_logger()
 
     if isinstance(ranges_or_cells, str):
         ranges_or_cells = [ranges_or_cells]
 
+    if not isinstance(ranges_or_cells, list):
+        raise ValueError(f'Non-str non-list ranges_or_cells cannot be passed in.')
+
     if len(ranges_or_cells) == 0:
         raise ValueError(f'Must pass at least one range or cell to query.')
+
+    single_cell_regex = '[A-Z]+\d+'
+    cell_range_regex = f'{single_cell_regex}:{single_cell_regex}'
+
+    for range_or_cell in ranges_or_cells:
+        if not isinstance(range_or_cell, str):
+            raise ValueError(f'range_or_cell must be str, not {range_or_cell}')
+
+        if not re.fullmatch(single_cell_regex, range_or_cell) and not re.fullmatch(cell_range_regex, range_or_cell):
+            raise ValueError(f'Malformed range_or_cell: "{range_or_cell}"')
 
     start_time = time.time()
 
@@ -98,10 +112,7 @@ def get_from_spreadsheet_api(spreadsheet_id: str, sheet_name: str, ranges_or_cel
 
             response = requests.get(f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchGet?key={key}&{range_expression}')
 
-        if response.status_code == 403 and response.json()['error']['status'] == 'PERMISSION_DENIED':
-            raise ForbiddenSpreadsheetError(spreadsheet_id=spreadsheet_id)
-
-        response.raise_for_status()
+        check_response(response, spreadsheet_id)
 
         logger.debug(f'Duration: {time.time() - start_time}')
 

@@ -9,8 +9,7 @@ import shutil
 from typing import List, Dict, Tuple, Union, Literal, Iterable, Optional, Any
 
 from System import System
-from SpireCharacterSheet import SpireCharacter, SpireSkill, SpireDomain
-from HeartCharacterSheet import HeartCharacter, HeartSkill, HeartDomain
+from CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
 from Roll import Roll
 from utils.google_sheets import get_spreadsheet_metadata
 from utils.format import strikethrough, bold
@@ -34,7 +33,7 @@ class Game(abc.ABC):
 
         self.spreadsheet_metadata = get_spreadsheet_metadata(self.spreadsheet_id)
 
-        self.character_sheets: Dict[str, Union[SpireCharacter, HeartCharacter]] = {}
+        self.character_sheets: Dict[str, CharacterSheet] = {}
 
         self.server_info_dirpath = os.path.join('servers', str(guild_id))
 
@@ -44,7 +43,7 @@ class Game(abc.ABC):
 
         self.logger = get_logger()
 
-    def get_character(self, user: discord.Member) -> Union[SpireCharacter, HeartCharacter]:
+    def get_character(self, user: discord.Member) -> CharacterSheet:
         if user.name in self.character_sheets:
             return self.character_sheets[user.name]
 
@@ -224,7 +223,7 @@ class SpireGame(Game):
         'Rules Engine'
     ]
 
-    def __init__(self, guild_id:  int, spreadsheet_id: str, less_lethal: bool, characters: Optional[List[HeartCharacter]] = None):
+    def __init__(self, guild_id:  int, spreadsheet_id: str, less_lethal: bool, characters: Optional[List[SpireCharacter]] = None):
         super().__init__(guild_id, spreadsheet_id, System.SPIRE)
 
         self.less_lethal = less_lethal
@@ -429,7 +428,7 @@ class SpireGame(Game):
         if 'characters' in game_data:
             for discord_username, character_data in game_data['characters'].items():
                 try:
-                    character = HeartCharacter.load(character_data)
+                    character = SpireCharacter.load(character_data)
                     characters.append(character)
                 except ValueError as v:
                     get_logger().error(v)
@@ -521,7 +520,7 @@ class HeartGame(Game):
     }
 
     FALLOUT_LEVELS = {
-        'Moderate': {
+        'Major': {
             'threshold': 7,
             'clear': 'all stress'
         },

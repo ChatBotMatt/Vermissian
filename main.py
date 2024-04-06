@@ -12,8 +12,7 @@ from typing import List, Tuple, Dict, Optional, Callable, Set, Union
 from Vermissian import Vermissian
 from Game import Game, SpireGame, HeartGame
 from System import System
-from SpireCharacterSheet import SpireSkill, SpireDomain
-from HeartCharacterSheet import HeartSkill, HeartDomain
+from CharacterSheet import SpireSkill, SpireDomain, HeartSkill, HeartDomain
 from Roll import Roll
 from utils.format import bold, underline, code, quote, bullet
 from utils.logger import get_logger
@@ -90,6 +89,7 @@ The following people helped test it, and are responsible for making it a lot nic
 
     testers = [
         'yuriAza',
+        'SavvyWolf, who you can find at https://savvywolf.scot/'
     ]
 
     tester_components = []
@@ -111,7 +111,7 @@ ichor-drowned, which the Delve Draws mechanic is from, is a product of Sillion L
 @command_logging_decorator
 @error_responder_decorator
 async def about_command(
-        ctx: discord.ApplicationContext,
+    ctx: discord.ApplicationContext,
 ):
     await ctx.respond(f'''For legal info, see {code("/legal")}.
     
@@ -165,7 +165,7 @@ async def suggest_command(
     suggestion: str,
 ):
     with open('user_suggestions.log', 'a', encoding='utf-8') as f:
-        f.write(f'Suggestion from {ctx.user.name}: ' + suggestion[:2000] + '\n')
+        f.write(f'Suggestion from {ctx.user.name}: ' + suggestion[:5000] + '\n')
 
     await ctx.respond(f'Thanks for the suggestion! Please note that not everything is feasible (especially when it\'s free to use) and it can be difficult to predict what\'s easy or hard to do. <https://xkcd.com/1425/> That being said, I really do appreciate your interest, and I read every suggestion!')
 
@@ -286,6 +286,8 @@ async def list_characters_command(
 
         message = '\n'.join(tokens)
 
+    message = message[:2000]
+
     await ctx.respond(message)
 
 @vermissian.slash_command(name='tag', description='Describes a given resource or equipment tag', guilds=[discord.Object(1218845257899446364), discord.Object(1193578278175375432)])
@@ -325,6 +327,11 @@ async def tag_command(
         message = f'Cannot find tag "{tag}"'
         logger.warning(f'Unknown tag: "{tag}" searched for.')
 
+    if len(message) > 2000:
+        message = 'The tag description is very long so some of it is cut off.\n\n' + message
+
+    message = message[:2000]
+
     await ctx.respond(message)
 
 @vermissian.slash_command(name='ability', description='Describes a given ability', guilds=[discord.Object(1218845257899446364), discord.Object(1193578278175375432)])
@@ -355,7 +362,7 @@ async def ability_command(
 
         quoted_description = '\n'.join(quote(line) for line in ability_to_format.description.split('\n'))
 
-        formatted = f'[{system_str} {ability_to_format.class_calling}] {bold(ability_to_format.name)}:\n\n{quoted_description}\n\n[{ability_to_format.tier} advance, {ability_to_format.source}]'
+        formatted = f'[{system_str}{ability_to_format.class_calling}] {bold(ability_to_format.name)}:\n\n{quoted_description}\n\n[{ability_to_format.tier} advance, {ability_to_format.source}]'
 
         return formatted
 
@@ -382,13 +389,18 @@ async def ability_command(
                 found_abilities[system] = found_ability
 
         if len(found_abilities):
-            for system, found_ability in found_abilities.items():
-                divider_text = '\n------------\n' if len(found_abilities) > 1 else ''
+            for system_index, (system, found_ability) in enumerate(found_abilities.items()):
+                divider_text = '\n------------\n' if len(found_abilities) > 1 and system_index < len(found_abilities) - 1 else ''
 
                 message += f'{format_ability(found_ability, system)}{divider_text}'
         else:
             message = f'Cannot find ability "{ability_to_use}"'
             logger.warning(f'Unknown ability: "{ability}" searched for.')
+
+    if len(message) > 2000:
+        message = 'The abilities are very long so some of it is cut off\n\n' + message
+
+    message = message[:2000]
 
     await ctx.respond(message)
 
@@ -1058,12 +1070,12 @@ async def add_character_command(
 
     response = f"Added character {character.character_name} and linked them to {ctx.user.display_name}."
 
+    response = response[:2000]
+
     await interaction.edit(content=response)
 
+@guild_required_decorator
 async def get_skills(ctx: discord.AutocompleteContext) -> List[str]:
-    if ctx.interaction.guild_id not in vermissian.player_guilds:
-        return [f'Link to a character tracker first! Use {code("/link")}']
-
     game_type = vermissian.player_guilds[ctx.interaction.guild_id].system
 
     if game_type == System.SPIRE:
@@ -1073,10 +1085,8 @@ async def get_skills(ctx: discord.AutocompleteContext) -> List[str]:
 
     raise ValueError(f'Unknown game type: "{game_type}".')
 
+@guild_required_decorator
 async def get_domains(ctx: discord.AutocompleteContext) -> List[str]:
-    if ctx.interaction.guild_id not in vermissian.player_guilds:
-        return [f'Link to a character tracker first! Use {code("/link")}']
-
     game_type = vermissian.player_guilds[ctx.interaction.guild_id].system
 
     if game_type == System.SPIRE:
@@ -1154,6 +1164,13 @@ async def roll_action_command(
 
     response = f'You rolled {len(results)}d{dice_size} ({modifier_expression}) {"" if difficulty == 0 else f" with a difficulty of {difficulty}"} {downgrade_expression}for a "**{outcome}**": {{{", ".join(results)}}}'
 
+    # TODO Roll Fallout at the same time, if taking stress?
+
+    if len(response) > 2000:
+        response = 'Very long roll, some of it will be cut off.\n\n' + response
+
+    response = response[:2000]
+
     await ctx.respond(response)
 
 async def get_resistance_tracks(ctx: discord.AutocompleteContext) -> List[str]:
@@ -1177,7 +1194,7 @@ async def get_resistance_tracks(ctx: discord.AutocompleteContext) -> List[str]:
 @command_logging_decorator
 @error_responder_decorator
 @character_required_decorator
-async def roll_fallout_command(
+async def roll_fallout_command( # TODO Nice to not always have to specify resistance track, but less lethal interferes there
     ctx: discord.ApplicationContext,
     resistance: discord.Option(str, 'Resistance track that triggered this', autocomplete=get_resistance_tracks)
 ):
@@ -1189,14 +1206,27 @@ async def roll_fallout_command(
         await ctx.respond(f'Invalid resistance: Must be one of {resistance_options}')
         return
 
-    rolled, level, stress_removed, original_stress = vermissian.roll_fallout(ctx.guild_id, ctx.user, resistance)
+    if guild.system == System.SPIRE:
+        rolled, level, stress_removed, original_stress = guild.roll_fallout(ctx.user, resistance)
 
-    response = f'You rolled a {rolled} for fallout, against {original_stress} stress '
+        response = f'You rolled a {rolled} for fallout, against {original_stress} stress '
 
-    if level == 'no':
-        response += f' so you {bold("avoid")} any fallout!'
-    else:
-        response += f'so you take {bold(level)} fallout. You can remove {stress_removed} fallout from your resistances.'
+        if level == 'no':
+            response += f'so you {bold("avoid")} any fallout!'
+        else:
+            response += f'so you take {bold(level)} fallout. You can remove {stress_removed} stress from your resistances.'
+
+    elif guild.system == System.HEART:
+        rolled, level, stress_removed, original_stress = guild.roll_fallout(ctx.user)
+
+        response = f'You rolled a {rolled} for fallout, against {original_stress} stress '
+
+        if level == 'no':
+            response += f'so you {bold("avoid")} any fallout!'
+        elif level == 'Minor':
+            response += f'so you take {bold(level)} fallout. You can remove all stress from the resistance that triggered this.'
+        else:
+            response += f'so you take {bold(level)} fallout. You can remove all stress from {bold("all")} of your resistances.'
 
     await ctx.respond(response)
 
@@ -1230,7 +1260,7 @@ def simple_roll(rolls: List[Roll], note: Optional[str] = None):
     all_results_tokens = []
 
     for index, roll in enumerate(rolls):
-        highest, results, _, total = SpireGame.simple_roll(roll)
+        highest, results, _, total = SpireGame.simple_roll(roll) # TODO Shouldn't be hardcoded Spire
 
         all_results.append(results)
         overall_highest = max(highest, overall_highest)
@@ -1280,7 +1310,7 @@ def simple_roll(rolls: List[Roll], note: Optional[str] = None):
 @vermissian.slash_command(name='unlink', description='Unlinks game information from the current server, undoing the last /link', guilds=[discord.Object(1218845257899446364), discord.Object(1193578278175375432)])
 @command_logging_decorator
 @error_responder_decorator
-async def link_command(
+async def unlink_command(
     ctx: discord.ApplicationContext,
 ):
     if ctx.guild_id in vermissian.player_guilds:
@@ -1351,7 +1381,17 @@ async def on_message(message: discord.Message):
         return
 
     if message.content.lower().strip().startswith('roll'):
-        await roll_command(ctx=message, rolls=message.content)
+        try:
+            rolls, note = Roll.parse_roll(message.content)
+
+            response = simple_roll(rolls, note)
+
+            await message.reply(response)
+        except VermissianError as v:
+            logger.error(v)
+            await message.reply(str(v))
+        except Exception as e:
+            logger.error(e)
 
 def main():
     with open('credentials.json', 'r') as f:

@@ -2,8 +2,7 @@ import discord
 
 from typing import Literal, List, Dict, Tuple, Union, Optional
 
-from SpireCharacterSheet import SpireCharacter, SpireSkill, SpireDomain
-from HeartCharacterSheet import HeartCharacter, HeartSkill, HeartDomain
+from CharacterSheet import CharacterSheet, SpireSkill, SpireDomain, HeartSkill, HeartDomain
 from Game import SpireGame, HeartGame
 from Roll import Roll
 from utils.google_sheets import get_sheet_name_from_gid, get_spreadsheet_id, get_spreadsheet_sheet_gid
@@ -49,9 +48,7 @@ class Vermissian(discord.Bot):
             game.remove()
             del self.player_guilds[guild_id]
 
-
-
-    def add_character(self, guild_id: int, spreadsheet_url: str, user: discord.Member) -> Union[SpireCharacter, HeartCharacter]:
+    def add_character(self, guild_id: int, spreadsheet_url: str, user: discord.Member) -> CharacterSheet:
         sheet_gid = get_spreadsheet_sheet_gid(spreadsheet_url)
 
         if sheet_gid is None:
@@ -81,7 +78,7 @@ class Vermissian(discord.Bot):
 
         return guild.roll_fallout(user, resistance)
 
-    def get_character(self, guild_id: int, character_name: str) -> Union[SpireCharacter, HeartCharacter]:
+    def get_character(self, guild_id: int, character_name: str) -> CharacterSheet:
         guild = self.player_guilds[guild_id]
 
         return guild.get_character(character_name)
