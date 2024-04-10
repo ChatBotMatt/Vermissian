@@ -138,13 +138,10 @@ class CharacterSheet(abc.ABC):
         )[self.sheet_name]
 
         # Brittle, but can't think of a better way atm whilst minimising complexity around the sheets.
-        if raw_sheet_data[self.CELL_REFERENCES['name_label']] == self.EXPECTED_NAME_LABEL:
-            valid_character = True
-        else:
-            valid_character = False
 
-        if not valid_character:
-            raise ValueError(f'"{self.sheet_name}" is not a character sheet - it does not have a "{self.EXPECTED_NAME_LABEL}" field at {self.CELL_REFERENCES["name_label"]}')
+        name_label_data = raw_sheet_data[self.CELL_REFERENCES["name_label"]]
+        if not name_label_data == self.EXPECTED_NAME_LABEL:
+            raise ValueError(f'"{self.sheet_name}" is not a character sheet - it does not have a "{self.EXPECTED_NAME_LABEL}" field at {self.CELL_REFERENCES["name_label"]}, it has {name_label_data}')
 
         character_discord_username = raw_sheet_data[self.CELL_REFERENCES['biography']['discord_username']]
 

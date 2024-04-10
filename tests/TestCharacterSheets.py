@@ -9,8 +9,7 @@ from typing import Dict
 
 import requests
 
-from utils.exceptions import ForbiddenSpreadsheetError
-from CharacterSheet import SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
+from CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
 
 @dataclasses.dataclass
 class MockResponse:
@@ -25,34 +24,28 @@ class MockResponse:
         return self.content
 
 class TestCharacterSheet(abc.ABC):
-    @mock.patch('utils.google_sheets.requests.get', autospec=True) # TODO Should mock CharacterSheet.get_from_spreadsheet_api here instead, and other places that I mock this
-    def test_initialise(self, mock_get: mock.Mock):
+    character_sheet_cls = CharacterSheet
 
+    example_sheet_name = 'abc'
+
+    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    def test_initialise(self, mock_get: unittest.mock.Mock):
         expected_name_label = 'Player Name (Pronouns)'
         expected_discord_username = 'Test Username'
         expected_character_name = 'Test Character Name'
 
-        valid_response = MockResponse(
-            status_code=200,
-            content={
-                'valueRanges': [
-                    {
-                        'values': [[expected_name_label]]
-                    },
-                    {
-                        'values': [[expected_discord_username]]
-                    },
-                    {
-                        'values': [[expected_character_name]]
-                    }
-                ]
+        valid_response = {
+            self.example_sheet_name: {
+                self.character_sheet_cls.CELL_REFERENCES['name_label']: expected_name_label,
+                self.character_sheet_cls.CELL_REFERENCES['biography']['character_name']: expected_character_name,
+                self.character_sheet_cls.CELL_REFERENCES['biography']['discord_username']: expected_discord_username
             }
-        )
+        }
 
         with self.subTest('Valid Character'):
             mock_get.return_value = valid_response
 
-            unnamed_character = SpireCharacter(spreadsheet_id='abc', sheet_name='def')
+            unnamed_character = self.character_sheet_cls(spreadsheet_id='abc', sheet_name=self.example_sheet_name)
 
             with self.subTest('Mock used'):
                 self.assertTrue(mock_get.called)
@@ -69,22 +62,13 @@ class TestCharacterSheet(abc.ABC):
                     expected_character_name
                 )
 
-        invalid_response = MockResponse(
-            status_code=200,
-            content={
-                'valueRanges': [
-                    {
-                        'values': [['abc']]
-                    },
-                    {
-                        'values': [[expected_discord_username]]
-                    },
-                    {
-                        'values': [[expected_character_name]]
-                    }
-                ]
+        invalid_response = {
+            self.example_sheet_name: {
+                self.character_sheet_cls.CELL_REFERENCES['name_label']: 'abc',
+                self.character_sheet_cls.CELL_REFERENCES['biography']['character_name']: expected_character_name,
+                self.character_sheet_cls.CELL_REFERENCES['biography']['discord_username']: expected_discord_username
             }
-        )
+        }
 
         with self.subTest('Invalid Character'):
             mock_get.return_value = invalid_response
@@ -93,47 +77,22 @@ class TestCharacterSheet(abc.ABC):
                 self.assertRaises(
                     ValueError,
                     SpireCharacter,
-                    self.valid_spreadsheet_id, self.valid_sheet_name
+                    self.valid_spreadsheet_id, self.example_sheet_name
                 )
 
             with self.subTest('Mock used'):
                 self.assertTrue(mock_get.called)
 
-        forbidden_response = MockResponse(
-            status_code=403,
-            content={'error': {'status': 'PERMISSION_DENIED'}}
-        )
-
-        with self.subTest('Invalid Character'):
-            mock_get.return_value = forbidden_response
-
-            with self.subTest('Initialisation Fails'):
-                self.assertRaises(
-                    ForbiddenSpreadsheetError,
-                    SpireCharacter,
-                    self.valid_spreadsheet_id, self.valid_sheet_name
-                )
-
-            with self.subTest('Mock used'):
-                self.assertTrue(mock_get.called)
-
-    @mock.patch('utils.google_sheets.requests.get', autospec=True)
+    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_check_skill_and_domain(self, mock_get: mock.Mock):
         for expected_has_skill, expected_has_domain in itertools.product([False, True], [False, True]):
             for skill, domain in itertools.product(self.skills, self.domains):
-                valid_response = MockResponse(
-                    status_code=200,
-                    content={
-                        'valueRanges': [
-                            {
-                                'values': [['TRUE' if expected_has_skill else 'FALSE']]
-                            },
-                            {
-                                'values': [['TRUE' if expected_has_domain else 'FALSE']]
-                            }
-                        ]
+                valid_response = {
+                    self.valid_unnamed_character.sheet_name: {
+                        self.character_sheet_cls.CELL_REFERENCES['skills'][skill.value]: 'TRUE' if expected_has_skill else 'FALSE',
+                        self.character_sheet_cls.CELL_REFERENCES['domains'][domain.value]: 'TRUE' if expected_has_domain else 'FALSE'
                     }
-                )
+                }
 
                 mock_get.return_value = valid_response
 
@@ -157,34 +116,23 @@ class TestCharacterSheet(abc.ABC):
                         expected_has_domain
                     )
 
-    @mock.patch('utils.google_sheets.requests.get', autospec=True)
+    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_bulk_create(self, mock_get: mock.Mock):
         expected_characters = [
             self.valid_unnamed_character,
             self.valid_named_character
         ]
 
-        mock_content = {
-            'valueRanges': []
-        }
+        mock_content = {}
 
         for expected_character in expected_characters:
-            mock_content['valueRanges'].extend([
-                {
-                    'values': [['Player Name (Pronouns)']]
-                },
-                {
-                    'values': [[expected_character.discord_username]]
-                },
-                {
-                    'values': [[expected_character.character_name]]
-                }
-            ])
+            mock_content[expected_character.sheet_name] = {
+                self.character_sheet_cls.CELL_REFERENCES['name_label']: self.character_sheet_cls.EXPECTED_NAME_LABEL,
+                self.character_sheet_cls.CELL_REFERENCES['biography']['character_name']: expected_character.character_name,
+                self.character_sheet_cls.CELL_REFERENCES['biography']['discord_username']: expected_character.discord_username
+            }
 
-        mock_get.return_value = MockResponse(
-            status_code=200,
-            content=mock_content
-        )
+        mock_get.return_value = mock_content
 
         created_characters = self.valid_unnamed_character.__class__.bulk_create(
             self.valid_spreadsheet_id,
@@ -212,24 +160,15 @@ class TestCharacterSheet(abc.ABC):
             )
 
         mock_content_with_invalid = {
-            'valueRanges': [
-                * mock_content['valueRanges'],
-                {
-                    'values': [['Not a Valid Label']]
-                },
-                {
-                    'values': [['Discord Username']]
-                },
-                {
-                    'values': [['Character Name']]
-                }
-            ]
+            ** mock_content,
+            'Invalid Sheet Name': {
+                self.character_sheet_cls.CELL_REFERENCES['name_label']: 'Not a Valid Label',
+                self.character_sheet_cls.CELL_REFERENCES['biography']['character_name']: 'Character Name',
+                self.character_sheet_cls.CELL_REFERENCES['biography']['discord_username']: 'Discord Username'
+            }
         }
 
-        mock_get.return_value = MockResponse(
-            status_code=200,
-            content=mock_content_with_invalid
-        )
+        mock_get.return_value = mock_content_with_invalid
 
         # We don't change expected_characters because one of them, the last, is invalid
 
@@ -263,9 +202,10 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
     valid_sheet_name = 'Example Character Sheet'
     other_valid_sheet_name = 'Character 1'
 
+    character_sheet_cls = SpireCharacter
+
     @mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
-
         stresses = [5, 2, 3, 4, 7]
 
         for less_lethal in [False, True]:
@@ -381,6 +321,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
     valid_spreadsheet_id = '1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY'
     valid_sheet_name = 'Example Character Sheet'
     other_valid_sheet_name = 'Character 1'
+
+    character_sheet_cls = HeartCharacter
 
     @mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
