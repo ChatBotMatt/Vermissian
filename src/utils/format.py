@@ -23,3 +23,6 @@ def quote(value: Union[int, str]) -> str:
 
 def bullet(value: Union[int, str]) -> str:
     return f'* {value}'
+
+def spoiler(value: Union[int, str]) -> str:
+    return f'||{value}||'

@@ -12,6 +12,11 @@ class NoGameError(VermissianError):
     def __init__(self, msg: str = 'You need to link to a character keeper before you can do that. Use /link', * args):
         super().__init__(msg, * args)
 
+class WrongGameError(VermissianError):
+
+    def __init__(self, msg: str = 'Cannot use that command with a {} game - you need to be linked to a {} game.', * args, expected_system: System, used_system: System):
+        super().__init__(msg.format(expected_system.value, used_system.value), * args)
+
 class NoCharacterError(VermissianError):
 
     def __init__(self, msg: str = 'You need to link yourself to a character before you can do that. Use /add_character', * args):
@@ -55,5 +60,9 @@ class NotARollError(VermissianError):
         super().__init__(msg, * args)
 
 class ForbiddenSpreadsheetError(VermissianError):
-    def __init__(self, msg: str = 'Access to the spreadsheet is forbidden. Please make sure that you have given View access to anyone with the link.', * args, spreadsheet_id: str):
+    def __init__(self, msg: str = 'Access to the spreadsheet with ID {} is forbidden. Please make sure that you have given View access to anyone with the link.', * args, spreadsheet_id: str):
         super().__init__(msg.format(spreadsheet_id), * args)
+
+class TooManyRequestsError(VermissianError):
+    def __init__(self, msg: str = 'The spreadsheets are currently overloaded - please wait a minute and try again.', * args):
+        super().__init__(msg, *args)

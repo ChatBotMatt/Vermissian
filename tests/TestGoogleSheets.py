@@ -5,9 +5,10 @@ import dataclasses
 from typing import Dict
 
 import requests
+import logging
 
-from utils.google_sheets import get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response
-from utils.exceptions import ForbiddenSpreadsheetError
+from utils.google_sheets import get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response, get_key, get_sheet_name_from_gid
+from utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
 
 @dataclasses.dataclass
 class MockResponse:
@@ -39,7 +40,7 @@ class TestGoogleSheets(unittest.TestCase):
                     None
                 )
 
-    def test_get_spreadsheet_gid(self):
+    def test_get_spreadsheet_sheet_gid(self):
         for label, url_data in self.valid_spreadsheet_gids.items():
             for url, expected_gid in url_data.items():
                 with self.subTest(label, url=url):
@@ -54,6 +55,54 @@ class TestGoogleSheets(unittest.TestCase):
                     get_spreadsheet_sheet_gid(url),
                     None
                 )
+
+    @unittest.mock.patch('utils.google_sheets.get_spreadsheet_metadata')
+    def test_get_sheet_name_from_gid(self, mock_metadata: mock.Mock):
+        initial_test_gid = 123
+        initial_test_name = 'Sheet 123'
+
+        mock_metadata.return_value = {
+            initial_test_gid: initial_test_name,
+            456: 'Sheet Named 456',
+            789: 'This sheet is called 789'
+        }
+
+        spreadsheet_id = '1'
+
+        sheet_name = get_sheet_name_from_gid(spreadsheet_id=spreadsheet_id, gid=123)
+
+        mock_metadata.assert_called_with(spreadsheet_id)
+
+        self.assertEqual(
+            sheet_name,
+            initial_test_name
+        )
+
+        for gid, expected_name in mock_metadata.return_value.items():
+            if gid == initial_test_gid:
+                continue
+
+            sheet_name = get_sheet_name_from_gid(spreadsheet_id=spreadsheet_id, gid=gid)
+
+            with self.subTest(f'Assert cached - {gid}'):
+                self.assertEqual(
+                    mock_metadata.call_count,
+                    1
+                )
+
+            with self.subTest(f'Assert correct sheet name'):
+                self.assertEqual(
+                    sheet_name,
+                    expected_name
+                )
+
+        with self.subTest('Unknown GIDs rejected'):
+            self.assertRaises(
+                IndexError,
+                get_sheet_name_from_gid,
+                spreadsheet_id,
+                55
+            )
 
     def test_check_response(self):
         valid_spreadsheet_id = '1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I'
@@ -79,6 +128,19 @@ class TestGoogleSheets(unittest.TestCase):
                 ForbiddenSpreadsheetError,
                 check_response,
                 forbidden_response,
+                valid_spreadsheet_id
+            )
+
+        overloaded_response = MockResponse(
+            status_code=429,
+            content={'error': {'status': 'RESOURCE_EXHAUSTED'}}
+        )
+
+        with self.subTest('Overloaded Response'):
+            self.assertRaises(
+                TooManyRequestsError,
+                check_response,
+                overloaded_response,
                 valid_spreadsheet_id
             )
 
@@ -170,6 +232,22 @@ class TestGoogleSheets(unittest.TestCase):
             )
 
         mock_requests_get.return_value = MockResponse(
+            status_code=429,
+            content={
+                'error': {
+                    'status': 'RESOURCE_EXHAUSTED'
+                }
+            }
+        )
+
+        with self.subTest('Metadata Call - Too Many Requests'):
+            self.assertRaises(
+                TooManyRequestsError,
+                get_spreadsheet_metadata,
+                valid_spreadsheet_id
+            )
+
+        mock_requests_get.return_value = MockResponse(
             status_code=404,
             content={
                 'error': {
@@ -239,7 +317,12 @@ class TestGoogleSheets(unittest.TestCase):
             with self.subTest(range_cell=valid_range_cell):
                 data_range = f'{valid_sheet_name}!{valid_range_cell}'
 
-                get_from_spreadsheet_api(spreadsheet_id=valid_spreadsheet_id, sheet_name=valid_sheet_name, ranges_or_cells=valid_range_cell)
+                get_from_spreadsheet_api(
+                    spreadsheet_id=valid_spreadsheet_id,
+                    raw_sheet_name_data={
+                        valid_sheet_name: valid_range_cell
+                    }
+                )
 
                 mock_requests_get.assert_called_with(f'https://sheets.googleapis.com/v4/spreadsheets/{valid_spreadsheet_id}/values/{data_range}?key={mock_key}')
 
@@ -249,7 +332,12 @@ class TestGoogleSheets(unittest.TestCase):
                 f'ranges={valid_sheet_name}!{valid_cell_range}' for valid_cell_range in valid_ranges_cells
             ])
 
-            get_from_spreadsheet_api(spreadsheet_id=valid_spreadsheet_id, sheet_name=valid_sheet_name, ranges_or_cells=valid_ranges_cells)
+            get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    valid_sheet_name: valid_ranges_cells
+                }
+            )
 
             mock_requests_get.assert_called_with(f'https://sheets.googleapis.com/v4/spreadsheets/{valid_spreadsheet_id}/values:batchGet?key={mock_key}&{range_expression}')
 
@@ -287,10 +375,15 @@ class TestGoogleSheets(unittest.TestCase):
         )
 
         with self.subTest('Test response parsing - multiple cells and ranges'):
-            data_gotten = get_from_spreadsheet_api(valid_spreadsheet_id, valid_sheet_name, mock_ranges_cells)
+            data_gotten = get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    valid_sheet_name: mock_ranges_cells
+                }
+            )
 
             self.assertEqual(
-                data_gotten,
+                data_gotten[valid_sheet_name],
                 mock_multi_range_cell_return_data
             )
 
@@ -308,10 +401,15 @@ class TestGoogleSheets(unittest.TestCase):
         )
 
         with self.subTest('Test response parsing - single cell'):
-            data_gotten = get_from_spreadsheet_api(valid_spreadsheet_id, valid_sheet_name, 'A1')
+            data_gotten = get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    valid_sheet_name: 'A1'
+                }
+            )
 
             self.assertEqual(
-                data_gotten,
+                data_gotten[valid_sheet_name],
                 mock_single_cell_return_data
             )
 
@@ -329,11 +427,49 @@ class TestGoogleSheets(unittest.TestCase):
         )
 
         with self.subTest('Test response parsing - single range'):
-            data_gotten = get_from_spreadsheet_api(valid_spreadsheet_id, valid_sheet_name, 'A1:B2')
+            data_gotten = get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    valid_sheet_name: 'A1:B2'
+                }
+            )
+
+            self.assertEqual(
+                data_gotten[valid_sheet_name],
+                mock_single_cell_return_data
+            )
+
+        mock_multi_sheet_return_data = {
+            'Character 1': {
+                'A1:B2': [1, 2]
+            },
+            'Character 2': {
+                'A2:B3': [3, 4]
+            }
+        }
+
+        mock_requests_get.return_value = MockResponse(
+            status_code=200,
+            content={
+                'valueRanges': [
+                    {'values': [1, 2]},
+                    {'values': [3, 4]}
+                ]
+            }
+        )
+
+        with self.subTest('Test response parsing - multi-sheet ranges'):
+            data_gotten = get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    'Character 1': 'A1:B2',
+                    'Character 2': 'A2:B3'
+                }
+            )
 
             self.assertEqual(
                 data_gotten,
-                mock_single_cell_return_data
+                mock_multi_sheet_return_data
             )
 
         mock_single_cell_return_data = {
@@ -350,10 +486,15 @@ class TestGoogleSheets(unittest.TestCase):
         )
 
         with self.subTest('Test response parsing - single backwards range'):
-            data_gotten = get_from_spreadsheet_api(valid_spreadsheet_id, valid_sheet_name, 'B2:A1')
+            data_gotten = get_from_spreadsheet_api(
+                spreadsheet_id=valid_spreadsheet_id,
+                raw_sheet_name_data={
+                    valid_sheet_name: 'B2:A1'
+                }
+            )
 
             self.assertEqual(
-                data_gotten,
+                data_gotten[valid_sheet_name],
                 mock_single_cell_return_data
             )
 
@@ -362,8 +503,7 @@ class TestGoogleSheets(unittest.TestCase):
                 ValueError,
                 get_from_spreadsheet_api,
                 valid_spreadsheet_id,
-                valid_sheet_name,
-                None
+                {valid_sheet_name: None},
             )
 
         with self.subTest('List of None ranges_or_cells'):
@@ -371,8 +511,7 @@ class TestGoogleSheets(unittest.TestCase):
                 ValueError,
                 get_from_spreadsheet_api,
                 valid_spreadsheet_id,
-                valid_sheet_name,
-                [None]
+                {valid_sheet_name: [None]},
             )
 
         malformed_ranges_and_cells = [
@@ -389,14 +528,55 @@ class TestGoogleSheets(unittest.TestCase):
         ]
 
         for malformed in malformed_ranges_and_cells:
+            with self.subTest('Malformed wrapped ranges_or_cells', malformed=malformed):
+                self.assertRaises(
+                    ValueError,
+                    get_from_spreadsheet_api,
+                    valid_spreadsheet_id,
+                    {valid_sheet_name: [malformed]},
+                )
+
             with self.subTest('Malformed ranges_or_cells', malformed=malformed):
                 self.assertRaises(
                     ValueError,
                     get_from_spreadsheet_api,
                     valid_spreadsheet_id,
-                    valid_sheet_name,
-                    [malformed]
+                    {valid_sheet_name: malformed},
                 )
+
+    @mock.patch('utils.google_sheets.json.load')
+    def test_get_key(self, mock_json_load: mock.Mock):
+        with self.subTest('Reads file'):
+            original_key = get_key()
+
+            mock_json_load.assert_called()
+
+        with self.subTest('Caches result'):
+            second_key = get_key()
+
+            self.assertEqual(
+                mock_json_load.call_count,
+                1
+            )
+
+            with self.subTest('Key is consistent'):
+                self.assertEqual(
+                    original_key,
+                    second_key
+                )
+
+    def setUp(self) -> None:
+        if hasattr(get_key, 'key'):
+            # TODO Ideally should be mocked for all of them anyway
+            delattr(get_key, 'key') # In case a previous test case has made it cached
+
+        logging.disable(logging.ERROR)
+
+    def tearDown(self) -> None:
+        if hasattr(get_key, 'key'):
+            delattr(get_key, 'key')  # In case a previous test case has made it cached
+
+        logging.disable(logging.NOTSET)
 
     @classmethod
     def setUpClass(cls) -> None:

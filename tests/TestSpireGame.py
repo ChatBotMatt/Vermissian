@@ -1,32 +1,42 @@
-import unittest
-from unittest import mock
+import discord
 
+import unittest
+import unittest.mock
+
+import requests
 import itertools
-import dataclasses
+import logging
 import shutil
 import os
+import random 
 from typing import List, Tuple
 
 from Game import SpireGame
-from CharacterSheet import SpireCharacter
+from CharacterSheet import SpireCharacter, SpireSkill, SpireDomain
+from Roll import Roll
 from utils.format import strikethrough, bold
 
-@dataclasses.dataclass
-class MockMember:
-    name: str = 'Big Bob'
-
 class TestSpireGame(unittest.TestCase):
+    DISCORD_USERNAME = 'jaffa6'
+    OTHER_DISCORD_USERNAME = 'other_jaffa6'
+
     SPIRE_GAME_DATA = {
         "guild_id": 123,
         "system": "spire",
         "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
         "less_lethal": False,
         "characters": {
-            "jaffa6": {
-                "discord_username": "jaffa6",
+            DISCORD_USERNAME: {
+                "discord_username": DISCORD_USERNAME,
                 "character_name": "Azuro (he / him)",
                 "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
                 "sheet_name": "Example Character Sheet"
+            },
+            OTHER_DISCORD_USERNAME: {
+                "discord_username": OTHER_DISCORD_USERNAME,
+                "character_name": "Placeholder Character",
+                "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
+                "sheet_name": "Placeholder Sheet"
             }
         }
     }
@@ -104,20 +114,6 @@ class TestSpireGame(unittest.TestCase):
                 self.assertEqual(downgrade, data['expected_downgrade'])
                 self.assertEqual(new_difficulty, data['expected_new_difficulty'])
 
-    def test_pick_highest(self):
-        all_subtests = {}
-
-        all_rolled = self.get_rolls()
-
-        for rolled in all_rolled:
-            all_subtests[rolled] = max(rolled)
-
-        for rolled, expected_pick in all_subtests.items():
-            with self.subTest(rolled=rolled):
-                picked = SpireGame.pick_highest(rolled)
-
-                self.assertEqual(expected_pick, picked)
-
     def test_apply_downgrade(self):
         downgrade_map = SpireGame.compute_downgrade_map()
 
@@ -145,6 +141,30 @@ class TestSpireGame(unittest.TestCase):
                     SpireGame.apply_downgrade(original_highest, downgrade),
                     expected
                 )
+
+        with self.subTest('Downgrade < 0'):
+            self.assertRaises(
+                ValueError,
+                SpireGame.apply_downgrade,
+                5,
+                -1
+            )
+
+        with self.subTest('Highest < 1'):
+            self.assertRaises(
+                ValueError,
+                SpireGame.apply_downgrade,
+                0,
+                0
+            )
+
+        with self.subTest('Highest > 10'):
+            self.assertRaises(
+                ValueError,
+                SpireGame.apply_downgrade,
+                11,
+                0
+            )
 
     def test_from_data(self):
         for valid_spire_data in [self.spire_game_data, self.spire_game_data_less_lethal]:
@@ -197,7 +217,241 @@ class TestSpireGame(unittest.TestCase):
                     invalid_data
                 )
 
-    def get_rolls(self) -> List[Tuple[int, ...]]:
+    @unittest.mock.patch('Game.SpireGame.get_result')
+    @unittest.mock.patch('Game.SpireGame.get_character')
+    def test_roll_check(self, mock_get_character: unittest.mock.Mock, mock_get_result: unittest.mock.Mock):
+        random.seed(42)
+
+        spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
+        mock_user = unittest.mock.Mock(discord.User, autospec=True)
+        mock_user.name = self.DISCORD_USERNAME
+
+        mock_get_character.return_value = unittest.mock.Mock(spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+
+        for original_num_dice in range(1, 3):
+            for difficulty in range(0, 2 + 1):
+                roll = Roll(
+                    num_dice=original_num_dice,
+                    dice_size=10,
+                    difficulty=difficulty
+                )
+
+                for skill in SpireSkill:
+                    for domain in SpireDomain:
+                        for character_has_skill in [False, True]:
+                            for character_has_domain in [False, True]:
+                                mock_get_character.return_value.check_skill_and_domain.return_value = character_has_skill, character_has_domain
+
+                                expected_num_dice = roll.num_dice
+
+                                if character_has_skill:
+                                    expected_num_dice += 1
+
+                                if character_has_domain:
+                                    expected_num_dice += 1
+
+                                roll_str = str({'expected_num_dice': expected_num_dice, 'difficulty': difficulty})
+
+                                highest, formatted_results, outcome, total, has_skill, has_domain, did_downgrade = spire_game.roll_check(
+                                    mock_user,
+                                    skill,
+                                    domain,
+                                    roll
+                                )
+
+                                if difficulty < expected_num_dice:
+                                    expected_downgrade = 0
+                                else:
+                                    expected_downgrade = (difficulty - expected_num_dice) + 1
+
+                                with self.subTest(f'Checked for skill and domain - {roll_str}'):
+                                    mock_get_character.check_skill_and_domain.called_with_args(
+                                        skill,
+                                        domain
+                                    )
+
+                                with self.subTest(f'Expected number of results - {roll_str}'):
+                                    self.assertEqual(
+                                        len(formatted_results),
+                                        expected_num_dice
+                                    )
+
+                                with self.subTest(f'get_result used - {roll_str}'):
+                                    mock_get_result.assert_called_with(
+                                        highest,
+                                        expected_downgrade
+                                    )
+
+    def test_simple_roll(self):
+        random.seed(42)
+
+        for num_dice in range(1, 5):
+            for difficulty in range(0, 3):
+                for bonus in range(-2, 3):
+                    for penalty in range(-2, 3):
+                        roll = Roll(
+                            num_dice=num_dice,
+                            dice_size=10,
+                            difficulty=difficulty,
+                            bonus=bonus,
+                            penalty=penalty
+                        )
+
+                        if difficulty < num_dice:
+                            expected_downgrade = 0
+                        else:
+                            expected_downgrade = (difficulty - num_dice) + 1
+
+                        effective_highest, formatted_results, downgrade, total = SpireGame.simple_roll(roll)
+
+                        with self.subTest(f'Downgrade computed properly - {roll}'):
+                            self.assertEqual(
+                                expected_downgrade,
+                                downgrade
+                            )
+
+                        with self.subTest(f'Correct number of results - {roll}'):
+                            self.assertEqual(
+                                len(formatted_results),
+                                num_dice
+                            )
+
+                        # Not rigorous proof, but a reasonable sanity check at least - unit testing random outcomes is otherwise kind of a nightmare.
+                        with self.subTest(f'Highest bounded by dice size - {roll}'):
+                            self.assertLessEqual(
+                                effective_highest,
+                                10 + bonus - penalty
+                            )
+
+                        with self.subTest(f'Lowest bounded by 0 - {roll}'):
+                            self.assertGreaterEqual(
+                                effective_highest,
+                                0 + bonus - penalty
+                            )
+
+    def test_get_result(self):
+        downgrade_map = {
+            SpireGame.CRIT_SUCCESS: SpireGame.SUCCESS,
+            SpireGame.SUCCESS: SpireGame.SUCCESS_AT_A_COST,
+            SpireGame.SUCCESS_AT_A_COST: SpireGame.FAILURE,
+            SpireGame.FAILURE: SpireGame.CRIT_FAILURE,
+            SpireGame.CRIT_FAILURE: SpireGame.CRIT_FAILURE
+        }
+
+        for downgrade in range(0, 5):
+            for threshold, original_expected_outcome in SpireGame.CORE_RESULTS.items():
+                remaining_downgrade = downgrade
+                expected_outcome = original_expected_outcome
+
+                while remaining_downgrade > 0:
+                    expected_outcome = downgrade_map[expected_outcome]
+                    remaining_downgrade -= 1
+
+                for modifier in [0, 1, 2]:
+                    highest = threshold + modifier
+
+                    if highest not in SpireGame.CORE_RESULTS or SpireGame.CORE_RESULTS[highest] != original_expected_outcome:
+                        continue
+
+                    result = SpireGame.get_result(highest, downgrade)
+
+                    with self.subTest(f'Check the result - {original_expected_outcome, highest, downgrade, modifier}'):
+                        self.assertEqual(
+                            result,
+                            expected_outcome,
+                        )
+
+    @unittest.mock.patch('Game.random.randint')
+    @unittest.mock.patch('Game.SpireGame.get_character')
+    def test_roll_fallout(self, mock_get_character: unittest.mock.Mock, mock_randint: unittest.mock.Mock):
+        random.seed(42)
+
+        spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
+        mock_user = unittest.mock.Mock(discord.User, autospec=True)
+        mock_user.name = self.DISCORD_USERNAME
+
+        mock_get_character.return_value = unittest.mock.Mock(spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+
+        for should_trigger in [False, True]:
+            for resistance in SpireCharacter.RESISTANCES:
+                for modifier in [0, 1]:
+                    for fallout_level, fallout_data in SpireGame.FALLOUT_LEVELS.items():
+                        threshold = fallout_data['threshold']
+                        stress_cleared_if_triggered = fallout_data['clear']
+
+                        character_stress = threshold + modifier
+                        mock_get_character.return_value.get_fallout_stress.return_value = character_stress
+
+                        if should_trigger:
+                            mock_randint.return_value = character_stress - modifier - 1
+                        else:
+                            mock_randint.return_value = character_stress + modifier + 1
+
+                        rolled, fallout_level_triggered, stress_removed, stress = spire_game.roll_fallout(mock_user, resistance)
+
+                        with self.subTest(f'get_character used - {should_trigger, modifier, fallout_level}'):
+                            mock_get_character.assert_called_with(mock_user)
+
+                        with self.subTest(f'get_fallout_stress used - {should_trigger, modifier, fallout_level}'):
+                            mock_get_character.return_value.get_fallout_stress.assert_called_with(spire_game.less_lethal, resistance)
+
+                        with self.subTest(f'Correct level triggered - {should_trigger, modifier, fallout_level}'):
+                            if should_trigger:
+                                self.assertEqual(
+                                    fallout_level_triggered,
+                                    fallout_level
+                                )
+                            else:
+                                self.assertEqual(
+                                    fallout_level_triggered,
+                                    'no'
+                                )
+
+                        with self.subTest(f'Correct amount cleared - {should_trigger, modifier, fallout_level}'):
+                            if should_trigger:
+                                self.assertEqual(
+                                    stress_removed,
+                                    stress_cleared_if_triggered
+                                )
+                            else:
+                                self.assertEqual(
+                                    stress_removed,
+                                    SpireGame.FALLOUT_LEVELS['no']['clear']
+                                )
+
+                        with self.subTest(f'Correct roll returned - {should_trigger, modifier, fallout_level}'):
+                            self.assertEqual(
+                                rolled,
+                                mock_randint.return_value
+                            )
+
+    def test_create_character(self):
+        game = SpireGame.from_data(self.SPIRE_GAME_DATA)
+        game.character_sheets = {}
+
+        character_data = self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]
+
+        created_character = game.create_character(
+            character_data['spreadsheet_id'],
+            character_data['sheet_name']
+        )
+
+        with self.subTest('Character data is correct'):
+            self.assertEqual(
+                created_character.info(),
+                character_data
+            )
+
+        invalid_character_data = self.SPIRE_GAME_DATA['characters'][self.OTHER_DISCORD_USERNAME]
+
+        with self.assertRaises(requests.HTTPError):
+            game.create_character(
+                invalid_character_data['spreadsheet_id'],
+                invalid_character_data['sheet_name']
+            )
+
+    @staticmethod
+    def get_rolls() -> List[Tuple[int, ...]]:
         all_rolled = []
 
         thresholds = list(range(1, 10 + 1))
@@ -209,12 +463,10 @@ class TestSpireGame(unittest.TestCase):
         return all_rolled
 
     def setUp(self) -> None:
-        self.mock_me = MockMember(name='jaffa6')
+        logging.disable(logging.ERROR)
 
-        self.mock_members = [
-            MockMember(),
-            self.mock_me
-        ]
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
 
     @classmethod
     def setUpClass(cls) -> None:

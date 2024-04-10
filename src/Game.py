@@ -11,10 +11,10 @@ from typing import List, Dict, Tuple, Union, Literal, Iterable, Optional, Any
 from System import System
 from CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
 from Roll import Roll
-from utils.google_sheets import get_spreadsheet_metadata
+from utils.google_sheets import get_spreadsheet_metadata, get_spreadsheet_sheet_gid, get_sheet_name_from_gid, get_spreadsheet_id
 from utils.format import strikethrough, bold
 from utils.logger import get_logger
-from utils.exceptions import UnknownSystemError
+from utils.exceptions import UnknownSystemError, NoSpreadsheetGidError
 
 class Game(abc.ABC):
     """
@@ -43,11 +43,29 @@ class Game(abc.ABC):
 
         self.logger = get_logger()
 
-    def get_character(self, user: discord.Member) -> CharacterSheet:
-        if user.name in self.character_sheets:
-            return self.character_sheets[user.name]
+    def add_character(self, spreadsheet_url: str, username: str) -> CharacterSheet:
+        sheet_gid = get_spreadsheet_sheet_gid(spreadsheet_url)
 
-        raise ValueError(f'No character linked to {user.name}: Known user-characters are {list(self.character_sheets.keys())}')
+        if sheet_gid is None:
+            raise NoSpreadsheetGidError(spreadsheet_url=spreadsheet_url)
+
+        spreadsheet_id = get_spreadsheet_id(spreadsheet_url)
+
+        sheet_name = get_sheet_name_from_gid(spreadsheet_id, sheet_gid)
+
+        character = self.create_character(spreadsheet_id, sheet_name)
+
+        character.discord_username = username
+
+        self.character_sheets[character.discord_username] = character
+
+        return character
+
+    def get_character(self, username: str) -> CharacterSheet:
+        if username in self.character_sheets:
+            return self.character_sheets[username]
+
+        raise ValueError(f'No character linked to {username}: Known user-characters are {list(self.character_sheets.keys())}')
 
     @classmethod
     def format_roll(cls, rolled: Iterable[int], indices_to_remove: Iterable[int], highest: int) -> List[str]:
@@ -137,10 +155,25 @@ class Game(abc.ABC):
 
         return game_data
 
+    def __eq__(self, other: 'Game'):
+        if type(self) == type(other) and \
+                self.guild_id == other.guild_id and \
+                self.spreadsheet_id == other.spreadsheet_id and \
+                self.character_sheets == other.character_sheets:
+            return True
+
+        return False
+
 class SpireGame(Game):
     """
     Represents a Discord server using the bot for a Spire game.
     """
+
+    CRIT_SUCCESS = 'Critical Success (+1 Stress outgoing per 10)'
+    SUCCESS = 'Success (no stress)'
+    SUCCESS_AT_A_COST = 'Success at a Cost (stress, one dice size lower if avoiding damage)'
+    FAILURE = 'Failure (stress)'
+    CRIT_FAILURE = 'Critical Failure (double stress)'
 
     TAGS = {
         'Accurate': 'If the user takes a minute or so to set up the shot as part of an ambush or surprise attack, they roll with mastery when attacking. This is not possible once combat has started. ',
@@ -202,14 +235,12 @@ class SpireGame(Game):
         },
     }
 
-    RESISTANCES = ['Blood', 'Mind', 'Silver', 'Shadow', 'Reputation']
-
     CORE_RESULTS = {
-        10: 'Critical Success (+1 Stress outgoing per 10)',
-        8: 'Success (no stress)',
-        6: 'Success at a Cost (stress, one dice size lower if avoiding damage)',
-        2: 'Failure (stress)',
-        1: 'Critical Failure (double stress)',
+        10: CRIT_SUCCESS,
+        8: SUCCESS,
+        6: SUCCESS_AT_A_COST,
+        2: FAILURE,
+        1: CRIT_FAILURE,
     }
 
     RESERVED_SHEET_NAMES = [
@@ -219,6 +250,8 @@ class SpireGame(Game):
         'GM Tracker (Vertical)',
         'Lines and Veils',
         'Notes',
+        'Refreshes',
+        'Fallouts',
         # 'Example Character Sheet' # TODO Re-enable when done testing
         'Rules Engine'
     ]
@@ -234,32 +267,24 @@ class SpireGame(Game):
         characters = [character for character in characters if character.discord_username is not None]
 
         if len(characters) == 0:
-            for sheet_id, sheet_name in self.spreadsheet_metadata.items():
-                if sheet_name not in self.RESERVED_SHEET_NAMES:
-                    self.logger.debug(sheet_name)
+            sheet_names_to_query = [sheet_name for sheet_name in self.spreadsheet_metadata.values() if sheet_name not in self.RESERVED_SHEET_NAMES]
 
-                    try:
-                        character = SpireCharacter(
-                            spreadsheet_id=spreadsheet_id,
-                            sheet_name=sheet_name,
-                        )
+            queried_characters: Dict[str, SpireCharacter] = SpireCharacter.bulk_create(
+                spreadsheet_id=spreadsheet_id,
+                sheet_names=sheet_names_to_query
+            )
 
-                        if character.discord_username is not None:
-                            characters.append(character)
-
-                    except ValueError as v:
-                        self.logger.error(v, exc_info=True)
-                        continue
+            for sheet_name, character in queried_characters.items():
+                if character.discord_username is not None:
+                    characters.append(character)
 
         for character in characters:
-            self.add_character(character)
+            self.character_sheets[character.discord_username] = character
 
-        self.save()
-
-    def roll_check(self, user: discord.Member, skill: SpireSkill, domain: SpireDomain, initial_roll: Roll) -> Tuple[int, List[str], str, int, bool, bool, bool]:
+    def roll_check(self, username: str, skill: SpireSkill, domain: SpireDomain, initial_roll: Roll) -> Tuple[int, List[str], str, int, bool, bool, bool]:
         roll = initial_roll
 
-        has_skill, has_domain = self.get_character(user).check_skill_and_domain(skill, domain)
+        has_skill, has_domain = self.get_character(username).check_skill_and_domain(skill, domain)
 
         if has_skill:
             roll.num_dice += 1
@@ -275,9 +300,9 @@ class SpireGame(Game):
 
         return highest, formatted_results, outcome, total, has_skill, has_domain, did_downgrade
 
-    def roll_fallout(self, user: discord.Member, resistance: Optional[Literal['Blood', 'Mind', 'Silver', 'Shadow', 'Reputation']]) -> Tuple[int, Literal['no', 'Minor', 'Moderate', 'Severe'], int, int]:
+    def roll_fallout(self, username: str, resistance: Optional[Literal['Blood', 'Mind', 'Silver', 'Shadow', 'Reputation']]) -> Tuple[int, Literal['no', 'Minor', 'Moderate', 'Severe'], int, int]:
 
-        character = self.get_character(user)
+        character = self.get_character(username)
 
         stress = character.get_fallout_stress(self.less_lethal, resistance)
 
@@ -293,12 +318,6 @@ class SpireGame(Game):
                     break
 
         return rolled, fallout_level, stress_removed, stress
-
-    @classmethod
-    def pick_highest(cls, rolled: Iterable[int]) -> int:
-        highest = max(rolled)
-
-        return highest
 
     @classmethod
     @functools.lru_cache()
@@ -338,14 +357,6 @@ class SpireGame(Game):
 
         return downgrade, new_difficulty
 
-    def add_character(self, character: SpireCharacter):
-         self.character_sheets[character.discord_username] = character
-
-         self.character_file_data[character.discord_username] = {
-             'spreadsheet_id': character.spreadsheet_id,
-             'sheet_name': character.sheet_name
-         }
-
     @classmethod
     def simple_roll(cls, roll: Roll) -> Tuple[int, List[str], int, int]:
         results = []
@@ -357,7 +368,7 @@ class SpireGame(Game):
         for i in range(num_dice):
             result = random.randint(1, roll.dice_size)
 
-            results.append(result)
+            results.append(result + roll.bonus - roll.penalty)
 
         effective_highest = max(results)
 
@@ -376,15 +387,15 @@ class SpireGame(Game):
 
         return formatted
 
-    @functools.lru_cache()
-    def get_result(self, highest: int, downgrade: int = 0) -> str:
-        new_result = self.apply_downgrade(highest, downgrade)
+    @classmethod
+    def get_result(cls, highest: int, downgrade: int = 0) -> str:
+        new_result = cls.apply_downgrade(highest, downgrade)
 
-        for threshold, outcome in self.CORE_RESULTS.items():
+        for threshold, outcome in cls.CORE_RESULTS.items():
             if threshold <= new_result:
-                return self.CORE_RESULTS[threshold]
+                return cls.CORE_RESULTS[threshold]
 
-        return self.CORE_RESULTS[1]
+        return cls.CORE_RESULTS[1]
 
     @classmethod
     def compute_downgrade_map(cls):
@@ -452,12 +463,24 @@ class SpireGame(Game):
         return game_data
 
     def __str__(self):
-        return f'A {"less lethal " if self.less_lethal else ""}Spire Game with Guild ID "{self.guild_id}" and the following characters: {[character.character_name for character in self.character_sheets.values()]}'
+        return f'A {"less lethal " if self.less_lethal else ""}Spire Game with Guild ID "{self.guild_id}", Spreadsheet ID {self.spreadsheet_id}, and the following characters: {[str(character) for character in self.character_sheets.values()]}'
+
+    def __eq__(self, other: 'SpireGame'):
+        if super().__eq__(other) and self.less_lethal == other.less_lethal:
+            return True
+
+        return False
 
 class HeartGame(Game):
     """
     Represents a Discord server using the bot for a Heart game.
     """
+
+    CRIT_SUCCESS = 'Critical Success (Increase outgoing Stress dice by 1 step)'
+    SUCCESS = 'Success (no stress)'
+    SUCCESS_AT_A_COST = 'Success at a Cost (stress, one dice size lower if avoiding damage)'
+    FAILURE = 'Failure (stress)'
+    CRIT_FAILURE = 'Critical Failure (double stress)'
 
     TAGS = {
         # Resource tags
@@ -501,22 +524,23 @@ class HeartGame(Game):
     }
 
     DIFFICULTIES = {
+        'Normal': 0,
         'Risky': 1,
         'Dangerous': 2,
     }
 
     CORE_RESULTS = {
-        10: 'Critical Success (Increase outgoing Stress dice by 1 step)',
-        8: 'Success (no stress)',
-        6: 'Success at a Cost (stress, one dice size lower if avoiding damage)',
-        2: 'Failure (stress)',
-        1: 'Critical Failure (double stress)'
+        10: CRIT_SUCCESS,
+        8: SUCCESS,
+        6: SUCCESS_AT_A_COST,
+        2: FAILURE,
+        1: CRIT_FAILURE,
     }
 
     DIFFICULT_ACTIONS_TABLE = {
-        10: 'Success at a Cost (stress, one dice size lower if avoiding damage)',
-        2: 'Failure (stress)',
-        1: 'Critical Failure (double stress)'
+        10: SUCCESS_AT_A_COST,
+        2: FAILURE,
+        1: CRIT_FAILURE
     }
 
     FALLOUT_LEVELS = {
@@ -534,17 +558,18 @@ class HeartGame(Game):
         },
     }
 
-    RESISTANCES = ['Blood', 'Echo', 'Mind', 'Fortune', 'Supplies']
-
     RESERVED_SHEET_NAMES = [
         'Credits',
         'Changelog',
         'Lines and Veils',
         'Notes',
         'GM Tracker',
+        'Fallouts',
+        'GM Tracker (Vertical)',
 
         # 'Example Character Sheet' # TODO Re-enable when done testing
         'Rules Engine w/ Expanded Abilities',
+        'Rules Engine',
         'Original Rules Engine'
     ]
 
@@ -557,45 +582,32 @@ class HeartGame(Game):
         characters = [character for character in characters if character.discord_username is not None]
 
         if len(characters) == 0:
-            for sheet_id, sheet_name in self.spreadsheet_metadata.items():
-                if sheet_name not in self.RESERVED_SHEET_NAMES:
-                    self.logger.debug(sheet_name)
+            sheet_names_to_query = [sheet_name for sheet_name in self.spreadsheet_metadata.values() if sheet_name not in self.RESERVED_SHEET_NAMES]
 
-                    try:
-                        character = HeartCharacter(
-                            spreadsheet_id=spreadsheet_id,
-                            sheet_name=sheet_name,
-                        )
+            queried_characters: Dict[str, HeartCharacter] = HeartCharacter.bulk_create(
+                spreadsheet_id=spreadsheet_id,
+                sheet_names=sheet_names_to_query
+            )
 
-                        if character.discord_username is not None:
-                            characters.append(character)
-
-                    except ValueError as v:
-                        self.logger.error(v, exc_info=True)
-                        continue
+            for sheet_name, character in queried_characters.items():
+                if character.discord_username is not None:
+                    characters.append(character)
 
         for character in characters:
-            self.add_character(character)
-
-        self.save()
-
-    def add_character(self, character: HeartCharacter):
-         self.character_sheets[character.discord_username] = character
+            self.character_sheets[character.discord_username] = character
 
     @classmethod
     def simple_roll(cls, roll: Roll) -> Tuple[int, List[str], bool, int]:
         results = []
 
-        use_difficult_actions_table, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, roll.difficulty)
-
-        num_dice = roll.num_dice - difficulty_to_use
-
-        for i in range(num_dice):
+        for i in range(roll.num_dice):
             result = random.randint(1, roll.dice_size)
 
-            results.append(result)
+            results.append(result + roll.bonus - roll.penalty)
 
         highest = max(results)
+
+        use_difficult_actions_table, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, roll.difficulty)
 
         indices_to_remove = []
         if use_difficult_actions_table:
@@ -605,7 +617,7 @@ class HeartGame(Game):
 
             indices_to_remove = [idx for idx, value in sorted_results[-difficulty_to_use : ]]
 
-            effective_highest = max([value for index, value in results if index not in indices_to_remove])
+            effective_highest = max([value for index, value in enumerate(results) if index not in indices_to_remove])
         else:
             effective_highest = highest
 
@@ -626,10 +638,10 @@ class HeartGame(Game):
 
         return use_difficult_actions_table, new_difficulty
 
-    def roll_check(self, user: discord.Member, skill: HeartSkill, domain: HeartDomain, initial_roll: Roll) -> Tuple[int, List[str], str, int, bool, bool, bool]:
+    def roll_check(self, username: str, skill: HeartSkill, domain: HeartDomain, initial_roll: Roll) -> Tuple[int, List[str], str, int, bool, bool, bool]:
         roll = initial_roll
 
-        has_skill, has_domain = self.get_character(user).check_skill_and_domain(skill, domain)
+        has_skill, has_domain = self.get_character(username).check_skill_and_domain(skill, domain)
 
         if has_skill:
             roll.num_dice += 1
@@ -643,8 +655,8 @@ class HeartGame(Game):
 
         return highest, formatted_results, outcome, total, has_skill, has_domain, use_difficult_actions_table
 
-    def roll_fallout(self, user: discord.Member) -> Tuple[int, Literal['no', 'Minor', 'Major'], Optional[str], int]:
-        character = self.get_character(user)
+    def roll_fallout(self, username: str) -> Tuple[int, Literal['no', 'Minor', 'Major'], Optional[str], int]:
+        character = self.get_character(username)
 
         stress = character.get_fallout_stress()
 
@@ -653,7 +665,7 @@ class HeartGame(Game):
         fallout_level = 'no'
         stress_removed = self.FALLOUT_LEVELS['no']['clear']
 
-        if rolled < stress:
+        if rolled <= stress:
             for fallout_level, fallout_level_data in self.FALLOUT_LEVELS.items():
                 if stress >= fallout_level_data['threshold']:
                     stress_removed = fallout_level_data['clear']
@@ -661,39 +673,20 @@ class HeartGame(Game):
 
         return rolled, fallout_level, stress_removed, stress
 
-    @functools.lru_cache()
-    def get_result(self, highest: int, use_difficult_actions_table: bool = False) -> str:
-        if use_difficult_actions_table:
-            for threshold, outcome in self.DIFFICULT_ACTIONS_TABLE.items():
-                if threshold <= highest:
-                    return self.DIFFICULT_ACTIONS_TABLE[threshold]
-
-            return self.DIFFICULT_ACTIONS_TABLE[1]
-        else:
-            for threshold, outcome in self.CORE_RESULTS.items():
-                if threshold <= highest:
-                    return self.CORE_RESULTS[threshold]
-
-            return self.CORE_RESULTS[1]
-
     @classmethod
-    def pick_highest(cls, rolled: Iterable[int], difficulty: int) -> int:
-        if difficulty == 0:
-            highest = max(rolled)
+    def get_result(cls, highest: int, use_difficult_actions_table: bool = False) -> str:
+        if use_difficult_actions_table:
+            for threshold, outcome in cls.DIFFICULT_ACTIONS_TABLE.items():
+                if threshold <= highest:
+                    return cls.DIFFICULT_ACTIONS_TABLE[threshold]
+
+            return cls.DIFFICULT_ACTIONS_TABLE[1]
         else:
-            sorted_results = sorted(rolled)
+            for threshold, outcome in cls.CORE_RESULTS.items():
+                if threshold <= highest:
+                    return cls.CORE_RESULTS[threshold]
 
-            highest = max(sorted_results[:-difficulty])
-
-        return highest
-
-    def get_character_names(self) -> List[str]:
-        names = []
-
-        for character_sheet in self.character_sheets.values():
-            names.append(character_sheet.character_name)
-
-        return names
+            return cls.CORE_RESULTS[1]
 
     def create_character(self, spreadsheet_id: str, sheet_name: str) -> HeartCharacter:
         return HeartCharacter(spreadsheet_id, sheet_name)
@@ -728,4 +721,4 @@ class HeartGame(Game):
         return game
 
     def __str__(self):
-        return f'A Heart Game with Guild ID "{self.guild_id}" and the following characters: {[character.character_name for character in self.character_sheets.values()]}'
+        return f'A Heart Game with Guild ID "{self.guild_id}", Spreadsheet ID {self.spreadsheet_id}, and the following characters: {[str(character) for character in self.character_sheets.values()]}'

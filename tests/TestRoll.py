@@ -1,4 +1,5 @@
 import unittest
+import logging
 
 from Roll import Roll, NoSidesError, NoDiceError, WrongDifficultyError, NotARollError
 
@@ -312,7 +313,10 @@ class TestRoll(unittest.TestCase):
                         )
 
     def setUp(self) -> None:
-        pass
+        logging.disable(logging.ERROR)
+
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
 
 if __name__ == '__main__':
     unittest.main()

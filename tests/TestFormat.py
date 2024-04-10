@@ -1,7 +1,8 @@
 import string
 import unittest
+import logging
 
-from utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet
+from utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler
 
 class TestFormat(unittest.TestCase):
 
@@ -85,11 +86,26 @@ class TestFormat(unittest.TestCase):
                     expected
                 )
 
+    def test_spoiler(self):
+        for text in self.texts:
+            expected = f'||{text}||'
+
+            with self.subTest(text):
+                self.assertEqual(
+                    spoiler(text),
+                    expected
+                )
+
     def setUp(self) -> None:
+        logging.disable(logging.ERROR)
+
         self.texts = [
             * list(string.ascii_letters),
             'The quick dog jumps over the lazy cow',
         ]
+
+    def tearDown(self) -> None:
+        logging.disable(logging.NOTSET)
 
 if __name__ == '__main__':
     unittest.main()
