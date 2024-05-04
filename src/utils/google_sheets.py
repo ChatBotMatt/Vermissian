@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 import time
 from typing import List, Dict, Union, Optional
 
-from utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
-from utils.logger import get_logger
+from src.utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
+from src.utils.logger import get_logger
 
 def get_key():
     if not hasattr(get_key, 'key'):

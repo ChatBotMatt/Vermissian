@@ -2,7 +2,7 @@ import abc
 import enum
 from typing import List, Dict, Tuple, Optional, Literal, Union
 
-from utils.google_sheets import get_from_spreadsheet_api
+from src.utils.google_sheets import get_from_spreadsheet_api
 
 class SpireSkill(enum.Enum):
     COMPEL      = 'Compel'

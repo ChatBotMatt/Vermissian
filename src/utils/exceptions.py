@@ -1,6 +1,6 @@
 import abc
 
-from System import System
+from src.System import System
 
 class VermissianError(Exception, abc.ABC):
     """

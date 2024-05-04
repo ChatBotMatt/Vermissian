@@ -1,5 +1,3 @@
-import discord
-
 import unittest
 import unittest.mock
 
@@ -8,13 +6,12 @@ import itertools
 import logging
 import shutil
 import os
-import random 
 from typing import List, Tuple
 
-from Game import SpireGame
-from CharacterSheet import SpireCharacter, SpireSkill, SpireDomain
-from Roll import Roll
-from utils.format import strikethrough, bold
+from src.Game import SpireGame
+from src.CharacterSheet import SpireCharacter, SpireSkill, SpireDomain
+from src.Roll import Roll
+from src.utils.format import strikethrough, bold
 
 class TestSpireGame(unittest.TestCase):
     DISCORD_USERNAME = 'jaffa6'
@@ -166,7 +163,12 @@ class TestSpireGame(unittest.TestCase):
                 0
             )
 
-    def test_from_data(self):
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def test_from_data(self, mock_get_spreadsheet_metadata: unittest.mock.Mock):
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
         for valid_spire_data in [self.spire_game_data, self.spire_game_data_less_lethal]:
             valid_game = SpireGame.from_data(valid_spire_data)
 
@@ -217,16 +219,10 @@ class TestSpireGame(unittest.TestCase):
                     invalid_data
                 )
 
-    @unittest.mock.patch('Game.SpireGame.get_result')
-    @unittest.mock.patch('Game.SpireGame.get_character')
+    @unittest.mock.patch('src.Game.SpireGame.get_result')
+    @unittest.mock.patch('src.Game.SpireGame.get_character')
     def test_roll_check(self, mock_get_character: unittest.mock.Mock, mock_get_result: unittest.mock.Mock):
-        random.seed(42)
-
-        spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
-        mock_user = unittest.mock.Mock(discord.User, autospec=True)
-        mock_user.name = self.DISCORD_USERNAME
-
-        mock_get_character.return_value = unittest.mock.Mock(spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+        mock_get_character.return_value = unittest.mock.Mock(self.spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
         for original_num_dice in range(1, 3):
             for difficulty in range(0, 2 + 1):
@@ -252,8 +248,8 @@ class TestSpireGame(unittest.TestCase):
 
                                 roll_str = str({'expected_num_dice': expected_num_dice, 'difficulty': difficulty})
 
-                                highest, formatted_results, outcome, total, has_skill, has_domain, did_downgrade = spire_game.roll_check(
-                                    mock_user,
+                                highest, formatted_results, outcome, total, has_skill, has_domain, did_downgrade = self.spire_game.roll_check(
+                                    self.DISCORD_USERNAME,
                                     skill,
                                     domain,
                                     roll
@@ -283,8 +279,6 @@ class TestSpireGame(unittest.TestCase):
                                     )
 
     def test_simple_roll(self):
-        random.seed(42)
-
         for num_dice in range(1, 5):
             for difficulty in range(0, 3):
                 for bonus in range(-2, 3):
@@ -361,16 +355,10 @@ class TestSpireGame(unittest.TestCase):
                             expected_outcome,
                         )
 
-    @unittest.mock.patch('Game.random.randint')
-    @unittest.mock.patch('Game.SpireGame.get_character')
+    @unittest.mock.patch('src.Game.random.randint')
+    @unittest.mock.patch('src.Game.SpireGame.get_character')
     def test_roll_fallout(self, mock_get_character: unittest.mock.Mock, mock_randint: unittest.mock.Mock):
-        random.seed(42)
-
-        spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
-        mock_user = unittest.mock.Mock(discord.User, autospec=True)
-        mock_user.name = self.DISCORD_USERNAME
-
-        mock_get_character.return_value = unittest.mock.Mock(spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+        mock_get_character.return_value = unittest.mock.Mock(self.spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
         for should_trigger in [False, True]:
             for resistance in SpireCharacter.RESISTANCES:
@@ -387,13 +375,13 @@ class TestSpireGame(unittest.TestCase):
                         else:
                             mock_randint.return_value = character_stress + modifier + 1
 
-                        rolled, fallout_level_triggered, stress_removed, stress = spire_game.roll_fallout(mock_user, resistance)
+                        rolled, fallout_level_triggered, stress_removed, stress = self.spire_game.roll_fallout(self.DISCORD_USERNAME, resistance)
 
                         with self.subTest(f'get_character used - {should_trigger, modifier, fallout_level}'):
-                            mock_get_character.assert_called_with(mock_user)
+                            mock_get_character.assert_called_with(self.DISCORD_USERNAME)
 
                         with self.subTest(f'get_fallout_stress used - {should_trigger, modifier, fallout_level}'):
-                            mock_get_character.return_value.get_fallout_stress.assert_called_with(spire_game.less_lethal, resistance)
+                            mock_get_character.return_value.get_fallout_stress.assert_called_with(self.spire_game.less_lethal, resistance)
 
                         with self.subTest(f'Correct level triggered - {should_trigger, modifier, fallout_level}'):
                             if should_trigger:
@@ -425,9 +413,20 @@ class TestSpireGame(unittest.TestCase):
                                 mock_randint.return_value
                             )
 
-    def test_create_character(self):
+    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def test_create_character(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_initialise: unittest.mock.Mock):
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
+        mock_initialise.return_value = self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]['character_name'], self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]['discord_username']
+
         game = SpireGame.from_data(self.SPIRE_GAME_DATA)
         game.character_sheets = {}
+
+        with self.subTest('Metadata gotten'):
+            mock_get_spreadsheet_metadata.assert_called()
 
         character_data = self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]
 
@@ -441,6 +440,8 @@ class TestSpireGame(unittest.TestCase):
                 created_character.info(),
                 character_data
             )
+
+        mock_initialise.side_effect = requests.HTTPError('Test Error')
 
         invalid_character_data = self.SPIRE_GAME_DATA['characters'][self.OTHER_DISCORD_USERNAME]
 
@@ -462,7 +463,14 @@ class TestSpireGame(unittest.TestCase):
 
         return all_rolled
 
-    def setUp(self) -> None:
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock) -> None:
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
+        self.spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
+
         logging.disable(logging.ERROR)
 
     def tearDown(self) -> None:

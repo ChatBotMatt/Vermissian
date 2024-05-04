@@ -4,8 +4,8 @@ import dataclasses
 import json
 from typing import Dict
 
-from System import System
-from utils.format import bullet
+from src.System import System
+from src.utils.format import bullet
 
 @dataclasses.dataclass
 class Ability:

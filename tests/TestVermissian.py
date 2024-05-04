@@ -8,20 +8,34 @@ import os
 import shutil
 from typing import Dict, Any, Union
 
-from Game import SpireGame, HeartGame
-from CharacterSheet import SpireCharacter, HeartCharacter
-from System import System
-from Vermissian import Vermissian
-from utils.exceptions import BadCharacterKeeperError
+from src.Game import SpireGame, HeartGame
+from src.CharacterSheet import SpireCharacter, HeartCharacter
+from src.System import System
+from src.Vermissian import Vermissian
+from src.utils.exceptions import BadCharacterKeeperError
 
 class TestVermissian(unittest.TestCase):
 
     # TODO These really should do mocks for adding/removing files
 
-    def test_create_game(self):
+    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api')
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def test_create_game(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_get_from_spreadsheet_api: unittest.mock.Mock):
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
         self.assert_no_games()
 
         for game_label, game_data in self.all_game_data.items():
+            mock_get_from_spreadsheet_api.return_value = {
+                character.sheet_name: {
+                    character.CELL_REFERENCES['name_label']: character.EXPECTED_NAME_LABEL,
+                    character.CELL_REFERENCES['biography']['discord_username']: character.discord_username,
+                    character.CELL_REFERENCES['biography']['character_name']: character.character_name,
+                } for character in game_data['characters']
+            }
+
             with self.subTest(f'Create game - {game_label}'):
                 self.vermissian.create_game(
                     game_data['guild_id'],
@@ -39,6 +53,8 @@ class TestVermissian(unittest.TestCase):
                 self.vermissian.remove_game(game_data['guild_id'])
 
                 self.assert_no_games()
+
+            mock_get_from_spreadsheet_api.side_effect = BadCharacterKeeperError(spreadsheet_url=game_data['invalid_spreadsheet_url'])
 
             with self.subTest('Create game with invalid spreadsheet URL'):
                 with self.assertRaises(BadCharacterKeeperError):
@@ -162,8 +178,14 @@ class TestVermissian(unittest.TestCase):
                 0
             )
 
-    def setUp(self) -> None:
+    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api')
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_get_from_spreadsheet_api: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
+
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
 
         self.all_game_data: Dict[str, Dict[str, Any]] = {
             'spire_lethal': {
@@ -254,6 +276,15 @@ class TestVermissian(unittest.TestCase):
         self.vermissian = Vermissian()
 
         for game_label, game_data in self.all_game_data.items():
+            if len(game_data['characters']) == 0:
+                mock_get_from_spreadsheet_api.return_value = {
+                    character.sheet_name: {
+                        character.CELL_REFERENCES['name_label']: character.EXPECTED_NAME_LABEL,
+                        character.CELL_REFERENCES['biography']['discord_username']: character.discord_username,
+                        character.CELL_REFERENCES['biography']['character_name']: character.character_name,
+                    } for character in game_data['characters']
+                }
+
             if game_data['system'] == System.SPIRE:
                 self.all_game_data[game_label]['game'] = SpireGame(
                     guild_id=game_data['guild_id'],

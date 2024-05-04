@@ -2,11 +2,11 @@ import discord
 
 from typing import Dict, Union
 
-from Game import SpireGame, HeartGame
-from System import System
-from utils.google_sheets import get_spreadsheet_id
-from utils.exceptions import BadCharacterKeeperError, UnknownSystemError
-from utils.logger import get_logger
+from src.Game import SpireGame, HeartGame
+from src.System import System
+from src.utils.google_sheets import get_spreadsheet_id
+from src.utils.exceptions import BadCharacterKeeperError, UnknownSystemError
+from src.utils.logger import get_logger
 
 class Vermissian(discord.Bot):
 

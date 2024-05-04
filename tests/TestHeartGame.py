@@ -1,9 +1,5 @@
-import discord
-
 import unittest
 import unittest.mock
-
-import random
 import itertools
 import logging
 import shutil
@@ -11,10 +7,10 @@ import os
 import requests
 from typing import List, Tuple
 
-from Game import HeartGame, HeartSkill, HeartDomain
-from Roll import Roll
-from CharacterSheet import HeartCharacter
-from utils.format import strikethrough, bold
+from src.Game import HeartGame, HeartSkill, HeartDomain
+from src.Roll import Roll
+from src.CharacterSheet import HeartCharacter
+from src.utils.format import strikethrough, bold
 
 class TestHeartGame(unittest.TestCase):
     DISCORD_USERNAME = 'jaffa6'
@@ -79,7 +75,12 @@ class TestHeartGame(unittest.TestCase):
                                     formatted_value
                                 )
 
-    def test_from_data(self):
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def test_from_data(self, mock_get_spreadsheet_metadata: unittest.mock.Mock):
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
         valid_game = HeartGame.from_data(self.HEART_GAME_DATA)
 
         self.assertTrue(isinstance(valid_game, HeartGame))
@@ -160,10 +161,8 @@ class TestHeartGame(unittest.TestCase):
                         expected_new_difficulty
                     )
 
-    @unittest.mock.patch('Game.HeartGame.compute_downgrade_difficulty')
+    @unittest.mock.patch('src.Game.HeartGame.compute_downgrade_difficulty')
     def test_simple_roll(self, mock_downgrade_difficulty: unittest.mock.Mock):
-        random.seed(42)
-
         for num_dice in range(1, 5):
             for difficulty in range(0, 3):
                 for bonus in range(-2, 3):
@@ -211,16 +210,10 @@ class TestHeartGame(unittest.TestCase):
                                 0 + bonus - penalty
                             )
 
-    @unittest.mock.patch('Game.HeartGame.get_result')
-    @unittest.mock.patch('Game.HeartGame.get_character')
+    @unittest.mock.patch('src.Game.HeartGame.get_result')
+    @unittest.mock.patch('src.Game.HeartGame.get_character')
     def test_roll_check(self, mock_get_character: unittest.mock.Mock, mock_get_result: unittest.mock.Mock):
-        random.seed(42)
-
-        heart_game = HeartGame.from_data(self.HEART_GAME_DATA)
-        mock_user = unittest.mock.Mock(discord.User, autospec=True)
-        mock_user.name = self.DISCORD_USERNAME
-
-        mock_get_character.return_value = unittest.mock.Mock(heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+        mock_get_character.return_value = unittest.mock.Mock(self.heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
         for num_dice in range(1, 3):
             for difficulty in range(0, 2 + 1):
@@ -244,7 +237,7 @@ class TestHeartGame(unittest.TestCase):
                                 if character_has_domain:
                                     expected_num_dice += 1
 
-                                highest, formatted_results, outcome, total, has_skill, has_domain, use_difficult_actions_table = heart_game.roll_check(mock_user, skill, domain, roll)
+                                highest, formatted_results, outcome, total, has_skill, has_domain, use_difficult_actions_table = self.heart_game.roll_check(self.DISCORD_USERNAME, skill, domain, roll)
 
                                 with self.subTest('Checked for skill and domain'):
                                     mock_get_character.check_skill_and_domain.called_with_args(
@@ -265,15 +258,9 @@ class TestHeartGame(unittest.TestCase):
                                     )
 
     @unittest.mock.patch('Game.random.randint')
-    @unittest.mock.patch('Game.HeartGame.get_character')
+    @unittest.mock.patch('src.Game.HeartGame.get_character')
     def test_roll_fallout(self, mock_get_character: unittest.mock.Mock, mock_randint: unittest.mock.Mock):
-        random.seed(42)
-
-        heart_game = HeartGame.from_data(self.HEART_GAME_DATA)
-        mock_user = unittest.mock.Mock(discord.User, autospec=True)
-        mock_user.name = self.DISCORD_USERNAME
-
-        mock_get_character.return_value = unittest.mock.Mock(heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
+        mock_get_character.return_value = unittest.mock.Mock(self.heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
         for should_trigger in [False, True]:
             for modifier in [0, 1]:
@@ -289,10 +276,10 @@ class TestHeartGame(unittest.TestCase):
                     else:
                         mock_randint.return_value = character_stress + modifier + 1
 
-                    rolled, fallout_level_triggered, stress_removed, stress = heart_game.roll_fallout(mock_user)
+                    rolled, fallout_level_triggered, stress_removed, stress = self.heart_game.roll_fallout(self.DISCORD_USERNAME)
 
                     with self.subTest('get_character used'):
-                        mock_get_character.assert_called_with(mock_user)
+                        mock_get_character.assert_called_with(self.DISCORD_USERNAME)
 
                     with self.subTest('get_fallout_stress used'):
                         mock_get_character.return_value.get_fallout_stress.assert_called()
@@ -356,7 +343,15 @@ class TestHeartGame(unittest.TestCase):
                     expected_outcome,
                 )
 
-    def test_create_character(self):
+    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def test_create_character(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_initialise: unittest.mock.Mock):
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
+        mock_initialise.return_value = self.HEART_GAME_DATA['characters'][self.DISCORD_USERNAME]['character_name'], self.HEART_GAME_DATA['characters'][self.DISCORD_USERNAME]['discord_username']
+
         game = HeartGame.from_data(self.HEART_GAME_DATA)
         game.character_sheets = {}
 
@@ -375,13 +370,22 @@ class TestHeartGame(unittest.TestCase):
 
         invalid_character_data = self.HEART_GAME_DATA['characters'][self.OTHER_DISCORD_USERNAME]
 
+        mock_initialise.side_effect = requests.HTTPError('Test Error')
+
         with self.assertRaises(requests.HTTPError):
             game.create_character(
                 invalid_character_data['spreadsheet_id'],
                 invalid_character_data['sheet_name']
             )
 
-    def setUp(self) -> None:
+    @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
+    def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock) -> None:
+        mock_get_spreadsheet_metadata.return_value = {
+            0: 'Example Character Sheet'
+        }
+
+        self.heart_game = HeartGame.from_data(self.HEART_GAME_DATA)
+
         logging.disable(logging.ERROR)
 
     def tearDown(self) -> None:

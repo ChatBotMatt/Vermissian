@@ -7,8 +7,8 @@ from typing import Dict
 import requests
 import logging
 
-from utils.google_sheets import get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response, get_key, get_sheet_name_from_gid
-from utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
+from src.utils.google_sheets import get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response, get_key, get_sheet_name_from_gid
+from src.utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
 
 @dataclasses.dataclass
 class MockResponse:
@@ -170,21 +170,13 @@ class TestGoogleSheets(unittest.TestCase):
                 valid_spreadsheet_id
             )
 
-    @mock.patch('utils.google_sheets.requests.get', autospec=True)
-    @mock.patch('utils.google_sheets.get_key', autospec=True)
+    @mock.patch('src.utils.google_sheets.requests.get', autospec=True)
+    @mock.patch('src.utils.google_sheets.get_key', autospec=True)
     def test_get_spreadsheet_metadata(self, mock_get_key: mock.Mock, mock_requests_get: mock.Mock):
         mock_key = '123'
         mock_get_key.return_value = mock_key
 
         valid_spreadsheet_id = '1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I'
-
-        get_spreadsheet_metadata(valid_spreadsheet_id)
-
-        with self.subTest('get_key called'):
-            mock_get_key.assert_called()
-
-        with self.subTest('Metadata Call made'):
-            mock_requests_get.assert_called_with(f'https://sheets.googleapis.com/v4/spreadsheets/{valid_spreadsheet_id}?key={mock_key}&fields=sheets.properties')
 
         mock_requests_get.return_value = MockResponse(
             status_code=200,
@@ -205,6 +197,14 @@ class TestGoogleSheets(unittest.TestCase):
                 ]
             }
         )
+
+        get_spreadsheet_metadata(valid_spreadsheet_id)
+
+        with self.subTest('get_key called'):
+            mock_get_key.assert_called()
+
+        with self.subTest('Metadata Call made'):
+            mock_requests_get.assert_called_with(f'https://sheets.googleapis.com/v4/spreadsheets/{valid_spreadsheet_id}?key={mock_key}&fields=sheets.properties')
 
         with self.subTest('Metadata Call - Valid Data'):
             self.assertEqual(
@@ -295,8 +295,8 @@ class TestGoogleSheets(unittest.TestCase):
                 valid_spreadsheet_id
             )
 
-    @mock.patch('utils.google_sheets.requests.get', autospec=True)
-    @mock.patch('utils.google_sheets.get_key', autospec=True)
+    @mock.patch('src.utils.google_sheets.requests.get', autospec=True)
+    @mock.patch('src.utils.google_sheets.get_key', autospec=True)
     def test_get_from_spreadsheet_api(self, mock_get_key: mock.Mock, mock_requests_get: mock.Mock):
         valid_spreadsheet_id = '1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I'
         valid_sheet_name = 'Example Character Sheet'
@@ -544,7 +544,7 @@ class TestGoogleSheets(unittest.TestCase):
                     {valid_sheet_name: malformed},
                 )
 
-    @mock.patch('utils.google_sheets.json.load')
+    @mock.patch('src.utils.google_sheets.json.load')
     def test_get_key(self, mock_json_load: mock.Mock):
         with self.subTest('Reads file'):
             original_key = get_key()

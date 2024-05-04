@@ -9,7 +9,7 @@ from typing import Dict
 
 import requests
 
-from CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
+from src.CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
 
 @dataclasses.dataclass
 class MockResponse:
@@ -28,7 +28,7 @@ class TestCharacterSheet(abc.ABC):
 
     example_sheet_name = 'abc'
 
-    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_initialise(self, mock_get: unittest.mock.Mock):
         expected_name_label = 'Player Name (Pronouns)'
         expected_discord_username = 'Test Username'
@@ -53,7 +53,7 @@ class TestCharacterSheet(abc.ABC):
             with self.subTest('Discord Username'):
                 self.assertEqual(
                     unnamed_character.discord_username,
-                    expected_discord_username
+                    expected_discord_username.lower()
                 )
 
             with self.subTest('Character Name'):
@@ -83,7 +83,7 @@ class TestCharacterSheet(abc.ABC):
             with self.subTest('Mock used'):
                 self.assertTrue(mock_get.called)
 
-    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_check_skill_and_domain(self, mock_get: mock.Mock):
         for expected_has_skill, expected_has_domain in itertools.product([False, True], [False, True]):
             for skill, domain in itertools.product(self.skills, self.domains):
@@ -116,7 +116,7 @@ class TestCharacterSheet(abc.ABC):
                         expected_has_domain
                     )
 
-    @unittest.mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_bulk_create(self, mock_get: mock.Mock):
         expected_characters = [
             self.valid_unnamed_character,
@@ -204,7 +204,7 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
 
     character_sheet_cls = SpireCharacter
 
-    @mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
         stresses = [5, 2, 3, 4, 7]
 
@@ -247,7 +247,8 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
                     'Bad Resistance'
                 )
 
-    def test_load(self):
+    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    def test_load(self, mock_initialise: unittest.mock.Mock):
         valid_info_including_name = {
             'discord_username': self.valid_unnamed_character.discord_username,
             'character_name': self.valid_unnamed_character.character_name,
@@ -268,11 +269,16 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
             'sheet_name': self.valid_unnamed_character.sheet_name
         }
 
+        mock_initialise.return_value = self.valid_unnamed_character.character_name, self.valid_unnamed_character.discord_username
+
         with self.subTest('Load unnamed character, given info without name'):
             self.assertEqual(
                 self.valid_unnamed_character,
                 SpireCharacter.load(valid_info_without_name)
             )
+
+        with self.subTest('Initialise Used'):
+            mock_initialise.assert_called()
 
     def test_equality(self):
         with self.subTest('Identical Objects'):
@@ -300,16 +306,22 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
                 self.valid_named_character
             )
 
-    def setUp(self) -> None:
+    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    def setUp(self, mock_initialise: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
+
+        self.test_character_name = 'Test Character Name'
+        self.test_discord_username = 'Test Discord Username'
+
+        mock_initialise.return_value = self.test_character_name, self.test_discord_username
 
         self.valid_unnamed_character = SpireCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name)
 
         self.valid_named_character = SpireCharacter(
             spreadsheet_id=self.valid_spreadsheet_id,
             sheet_name=self.other_valid_sheet_name,
-            character_name='Test Character Name',
-            discord_username='Test Discord Username'
+            character_name=self.test_character_name,
+            discord_username=self.test_discord_username
         )
 
         self.skills = [skill for skill in SpireSkill]
@@ -324,7 +336,7 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
 
     character_sheet_cls = HeartCharacter
 
-    @mock.patch('CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
         expected_stress = 4
 
@@ -352,7 +364,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
                 expected_stress
             )
 
-    def test_load(self):
+    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    def test_load(self, mock_initialise: unittest.mock.Mock):
         valid_info_including_name = {
             'discord_username': self.valid_unnamed_character.discord_username,
             'character_name': self.valid_unnamed_character.character_name,
@@ -373,11 +386,16 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
             'sheet_name': self.valid_unnamed_character.sheet_name
         }
 
+        mock_initialise.return_value = self.valid_unnamed_character.character_name, self.valid_unnamed_character.discord_username
+
         with self.subTest('Load unnamed character, given info without name'):
             self.assertEqual(
                 self.valid_unnamed_character,
                 HeartCharacter.load(valid_info_without_name)
             )
+
+        with self.subTest('Initialise Used'):
+            mock_initialise.assert_called()
 
     def test_equality(self):
         with self.subTest('Identical Objects'):
@@ -405,21 +423,26 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
                 self.valid_named_character
             )
 
-    @classmethod
-    def setUp(cls) -> None:
+    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    def setUp(self, mock_initialise: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
 
-        cls.valid_unnamed_character = HeartCharacter(spreadsheet_id=cls.valid_spreadsheet_id, sheet_name=cls.valid_sheet_name)
+        self.test_character_name = 'Test Character Name'
+        self.test_discord_username = 'Test Discord Username'
 
-        cls.valid_named_character = HeartCharacter(
-            spreadsheet_id=cls.valid_spreadsheet_id,
-            sheet_name=cls.other_valid_sheet_name,
-            character_name='Test Character Name',
-            discord_username='Test Discord Username'
+        mock_initialise.return_value = self.test_character_name, self.test_discord_username
+
+        self.valid_unnamed_character = HeartCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name)
+
+        self.valid_named_character = HeartCharacter(
+            spreadsheet_id=self.valid_spreadsheet_id,
+            sheet_name=self.other_valid_sheet_name,
+            character_name=self.test_character_name,
+            discord_username=self.test_discord_username
         )
 
-        cls.skills = [skill for skill in HeartSkill]
-        cls.domains = [domain for domain in HeartDomain]
+        self.skills = [skill for skill in HeartSkill]
+        self.domains = [domain for domain in HeartDomain]
 
         logging.disable(logging.NOTSET)
 

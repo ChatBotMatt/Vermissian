@@ -2,7 +2,7 @@ import string
 import unittest
 import logging
 
-from utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler, no_embed
+from src.utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler, no_embed
 
 class TestFormat(unittest.TestCase):
 

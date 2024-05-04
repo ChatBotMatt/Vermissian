@@ -1,5 +1,3 @@
-import discord
-
 import random
 import abc
 import functools
@@ -8,13 +6,13 @@ import json
 import shutil
 from typing import List, Dict, Tuple, Union, Literal, Iterable, Optional, Any
 
-from System import System
-from CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
-from Roll import Roll
-from utils.google_sheets import get_spreadsheet_metadata, get_spreadsheet_sheet_gid, get_sheet_name_from_gid, get_spreadsheet_id
-from utils.format import strikethrough, bold
-from utils.logger import get_logger
-from utils.exceptions import UnknownSystemError, NoSpreadsheetGidError
+from src.System import System
+from src.CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
+from src.Roll import Roll
+from src.utils.google_sheets import get_spreadsheet_metadata, get_spreadsheet_sheet_gid, get_sheet_name_from_gid, get_spreadsheet_id
+from src.utils.format import strikethrough, bold
+from src.utils.logger import get_logger
+from src.utils.exceptions import UnknownSystemError, NoSpreadsheetGidError
 
 class Game(abc.ABC):
     """
@@ -345,12 +343,15 @@ class SpireGame(Game):
         if num_dice > difficulty:
             new_difficulty = difficulty
             downgrade = 0
+
         elif num_dice == 1:
             new_difficulty = 0
             downgrade = difficulty
+
         elif num_dice == difficulty:
             new_difficulty = 1
             downgrade = difficulty - 1
+
         else:
             new_difficulty = num_dice - 1
             downgrade = difficulty - new_difficulty
