@@ -313,6 +313,8 @@ class SpireCharacter(CharacterSheet):
             }
         )[self.sheet_name][ranges_or_cells]
 
+        stress = int(stress)
+
         return stress
 
     @classmethod
@@ -403,6 +405,8 @@ class HeartCharacter(CharacterSheet):
                 self.sheet_name: ranges_or_cells
             }
         )[self.sheet_name][ranges_or_cells]
+
+        stress = int(stress)
 
         return stress
 
