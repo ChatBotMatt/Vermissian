@@ -56,7 +56,7 @@ class TestGoogleSheets(unittest.TestCase):
                     None
                 )
 
-    @unittest.mock.patch('utils.google_sheets.get_spreadsheet_metadata')
+    @unittest.mock.patch('src.utils.google_sheets.get_spreadsheet_metadata')
     def test_get_sheet_name_from_gid(self, mock_metadata: mock.Mock):
         initial_test_gid = 123
         initial_test_name = 'Sheet 123'
