@@ -19,8 +19,8 @@ class WrongGameError(VermissianError):
 
 class NoCharacterError(VermissianError):
 
-    def __init__(self, msg: str = 'You need to link yourself to a character before you can do that. Use /add_character', * args):
-        super().__init__(msg, * args)
+    def __init__(self, msg: str = 'User {} is not linked to a character, which is required for this command. Use /add_character', * args, username: str):
+        super().__init__(msg.format(username), * args)
 
 class BadCharacterKeeperError(VermissianError):
     def __init__(self, msg: str = 'The character keeper URL "{}" is not valid. It should look like "https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit#gid=0" (potentially with different spreadsheet ID and gid)', * args, spreadsheet_url: str):
