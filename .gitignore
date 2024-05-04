@@ -6,3 +6,4 @@ client_secret_*
 *.log
 .idea
 __pycache__
+nohup.out
