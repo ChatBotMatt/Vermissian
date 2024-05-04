@@ -668,7 +668,7 @@ class HeartGame(Game):
 
         if rolled <= stress:
             for fallout_level, fallout_level_data in self.FALLOUT_LEVELS.items():
-                if stress >= fallout_level_data['threshold']:
+                if rolled >= fallout_level_data['threshold']:
                     stress_removed = fallout_level_data['clear']
                     break
 
