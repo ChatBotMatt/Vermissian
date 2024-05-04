@@ -5,3 +5,4 @@ credentials.json
 client_secret_*
 *.log
 .idea
+__pycache__
