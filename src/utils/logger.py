@@ -3,9 +3,9 @@ import sys
 
 class VermissianLogFormatter(logging.Formatter):
     fmts = {
-        'error': '%(asctime)s %(name)s - %(levelname)s - %(pathname)s %(lineno)s - %(message)s - %(sinfo)s',
-        'debug': '%(asctime)s %(name)s - %(levelname)s - %(pathname)s %(lineno)s - %(message)s - %(sinfo)s',
-        'info':  '%(asctime)s %(name)s - %(levelname)s - %(pathname)s %(lineno)s - %(message)s'
+        'error': '%(asctime)s %(name)s - %(levelname)s - %(pathname)s line %(lineno)s - %(message)s - %(sinfo)s',
+        'debug': '%(asctime)s %(name)s - %(levelname)s - %(pathname)s line %(lineno)s - %(message)s - %(sinfo)s',
+        'info':  '%(asctime)s %(name)s - %(levelname)s - %(pathname)s line %(lineno)s - %(message)s'
     }
 
     def __init__(self):
