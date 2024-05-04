@@ -1,7 +1,7 @@
 import unittest
 import logging
 
-from Roll import Roll, NoSidesError, NoDiceError, WrongDifficultyError, NotARollError
+from src.Roll import Roll, NoSidesError, NoDiceError, WrongDifficultyError, NotARollError
 
 class TestRoll(unittest.TestCase):
 
@@ -97,30 +97,6 @@ class TestRoll(unittest.TestCase):
                     ], None),
 
                 'Roll 3d6 + 0, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
-
-                'Roll 3d6 + 3.5, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
-
-                'Roll 3d6 + 3.5, 1d4-2.5, 4d10': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
-
-                'Roll 3d6 + a, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
-
-                'Roll 3d6 - a, 1d4-2, 4d10': ([
                     Roll(num_dice=3, dice_size=6),
                     Roll(num_dice=1, dice_size=4, penalty=2),
                     Roll(num_dice=4, dice_size=10),
@@ -231,6 +207,16 @@ class TestRoll(unittest.TestCase):
                 'Roll 3 d6',
                 'Roll 3 d 6',
                 'Roll 3d 6',
+            ],
+
+            'Bad syntax': [
+                ('Roll 3d10 if you have the skill and the domain', ValueError),
+                ('Roll 3d6 + 3.5, 1d4-2, 4d10', ValueError),
+                ('Roll 3d6 + 3.5, 1d4-2.5, 4d10', ValueError),
+                ('Roll 3d6 + a, 1d4-2, 4d10', ValueError),
+                ('Roll 3d6 - a, 1d4-2, 4d10', ValueError),
+                ('Roll 3d6 - a, 1d4-2, 4d10, Difficulty 1', ValueError),
+                ('Roll 3d6, 1d4-2, 4d10, Difficulty 1.5', ValueError),
             ],
 
             'Wrong order': [

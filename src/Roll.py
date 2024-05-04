@@ -1,7 +1,7 @@
 import re
 from typing import List, Tuple, Optional
 
-from utils.exceptions import NotARollError, NoSidesError, NoDiceError, WrongDifficultyError
+from src.utils.exceptions import NotARollError, NoSidesError, NoDiceError, WrongDifficultyError
 
 class Roll:
     """
@@ -90,15 +90,23 @@ class Roll:
         note_parsed_roll_str = note_parsed_roll_str.strip().lower()
 
         regex_formatters = {
-            '(?: *,? *)diff(?:iculty)? (\d+)': r', difficulty_\1',
+            ' +': ' ', # Normalise multiple spaces
 
-            ' *\+ *(\d+)': r' +_\1',
+            ' [Dd](\d)': r' 1d\1', # Normalise dX syntax to 1dX
 
-            ' *- *(\d+)': r' -_\1',
+            '(\d)D(\d)': r'\1d\2', # Normalise casing of the d for dice.
 
-            ',? *(\d+)?d(\d+)': r', \1d\2',
+            '(?: *,? *)diff(?:iculty)? (\d+)': r', difficulty_\1', # Normalise difficulty marker and combine it with the value.
 
-            'roll,': 'roll'
+            ' ?\+ ?(\d+)d(\d)': r', \1d\2',  # Normalise "+"-delimited dice to be comma-delimited.
+
+            ' ?\+ ?(\d+)': r' +_\1', # Combine + with its value.
+
+            ' ?- ?(\d+)': r' -_\1', # Combne - with its value.
+
+            ',? ?(\d+)?d(\d+)': r', \1d\2', # Normalise potentially-missing spaces and commas to properly separate dice
+
+            'roll,': 'roll' # Remove extraneous commmas
         }
 
         formatted_roll_str = note_parsed_roll_str
@@ -137,7 +145,7 @@ class Roll:
                     if invalid_roll_match is not None:
                         raise NoSidesError(dice_size=invalid_roll_match.group(2))
                     else:
-                        raise ValueError(f'First token must be a roll. Roll str was "{roll_str}".')
+                        raise ValueError(f'First token must be a roll. Roll str was "{roll_str}", formatted to "{formatted_roll_str}", and first token was "{subtokens[0]}" in "{subtokens}".')
                 else:
                     if roll_match.group(1) is None:
                         num_dice = 1
@@ -164,6 +172,8 @@ class Roll:
 
                                 if penalty_match is not None:
                                     penalty += int(penalty_match.group(1))
+                                else:
+                                    raise ValueError(f'Invalid subtoken found: "{subtoken}" in "{roll_str}" that was formatted to "{formatted_roll_str}".')
                             else:
                                 bonus += int(bonus_match.group(1))
 
