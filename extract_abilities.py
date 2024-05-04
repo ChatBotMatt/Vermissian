@@ -34,6 +34,9 @@ def main():
     for line in spire_lines:
         name = line['Ability'].title().replace("'S", "'s")
 
+        if len(name) == 0:
+            continue
+
         description = line['Description']
 
         description = description.replace('• ', bullet(''))
@@ -59,6 +62,8 @@ def main():
         if ' - ' in name:
             continue
         elif '(base)' in name:
+            continue
+        elif len(name) == 0:
             continue
 
         description = line['Ability Description']
