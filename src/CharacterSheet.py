@@ -143,7 +143,7 @@ class CharacterSheet(abc.ABC):
         if not name_label_data == self.EXPECTED_NAME_LABEL:
             raise ValueError(f'"{self.sheet_name}" is not a character sheet - it does not have a "{self.EXPECTED_NAME_LABEL}" field at {self.CELL_REFERENCES["name_label"]}, it has {name_label_data}')
 
-        character_discord_username = raw_sheet_data[self.CELL_REFERENCES['biography']['discord_username']]
+        character_discord_username = raw_sheet_data[self.CELL_REFERENCES['biography']['discord_username']].lower() # Discord usernames are forced to be lowercase
 
         character_name = raw_sheet_data[self.CELL_REFERENCES['biography']['character_name']]
 
