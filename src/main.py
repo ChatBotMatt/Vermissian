@@ -11,15 +11,15 @@ from typing import Callable, Union
 from src.Vermissian import Vermissian
 from src.Game import Game, HeartGame
 from src.System import System
-from src.CharacterSheet import SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
+from src.CharacterSheet import SpireCharacter, SpireSkill, SpireDomain, HeartSkill, HeartDomain
 from src.Roll import Roll
+from src.utils.format import bold, underline, code
+from src.utils.logger import get_logger
+from src.utils.exceptions import VermissianError, NoCharacterError, NoGameError
 from src.commands import get_credits, get_legal, get_privacy_policy, get_about, get_donate, \
     get_commands_page_content, get_getting_started_page_content, get_debugging_page_content, \
     get_tag, get_character_list, get_ability, get_delve_draw, link, unlink, \
     spire_fallout, roll_spire_action, heart_fallout, roll_heart_action, add_character, log_suggestion, simple_roll
-from src.utils.format import bold, underline, code, spoiler
-from src.utils.logger import get_logger
-from src.utils.exceptions import VermissianError, NoCharacterError, NoGameError
 
 intents = discord.Intents.default()
 intents.message_content = True

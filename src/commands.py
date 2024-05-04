@@ -48,9 +48,9 @@ def get_credits():
     for tester in testers:
         tester_components.append(tester)
 
-    message += f'\n{bullet("")}' + '\n'.join(bullet(tester) for tester in testers)
+    message += f'\n' + '\n'.join(bullet(tester) for tester in testers)
 
-    message += f'\n\nVermissian\'s icon was done by spooksiedoodle, whose work you can find here: {no_embed("https://www.tumblr.com/spooksiedoodle/744425660184936448/commissions-are-open-i-have-some-ttrpg-specials")}'
+    message += f'\n\nVermissian\'s icon was done by Spooksiedoodle, whose work you can find here: {no_embed("https://www.tumblr.com/spooksiedoodle/744425660184936448/commissions-are-open-i-have-some-ttrpg-specials")}'
 
     message += f'''\n\nSpire is copyright Rowan, Rook and Decard. You can find out more and support these games at rowanrookanddecard.com and you can find Spire at {no_embed("https://rowanrookanddecard.com/product/spire-rpg/")}
 
