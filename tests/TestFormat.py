@@ -2,7 +2,7 @@ import string
 import unittest
 import logging
 
-from utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler
+from utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler, no_embed
 
 class TestFormat(unittest.TestCase):
 
@@ -93,6 +93,16 @@ class TestFormat(unittest.TestCase):
             with self.subTest(text):
                 self.assertEqual(
                     spoiler(text),
+                    expected
+                )
+
+    def test_no_embed(self):
+        for text in self.texts:
+            expected = f'<{text}>'
+
+            with self.subTest(text):
+                self.assertEqual(
+                    no_embed(text),
                     expected
                 )
 

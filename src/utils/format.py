@@ -26,3 +26,6 @@ def bullet(value: Union[int, str]) -> str:
 
 def spoiler(value: Union[int, str]) -> str:
     return f'||{value}||'
+
+def no_embed(value: Union[int, str]) -> str:
+    return f'<{value}>'
