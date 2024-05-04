@@ -15,7 +15,7 @@ class NoGameError(VermissianError):
 class WrongGameError(VermissianError):
 
     def __init__(self, msg: str = 'Cannot use that command with a {} game - you need to be linked to a {} game.', * args, expected_system: System, used_system: System):
-        super().__init__(msg.format(expected_system.value, used_system.value), * args)
+        super().__init__(msg.format(expected_system.value.title(), used_system.value.title()), * args)
 
 class NoCharacterError(VermissianError):
 
