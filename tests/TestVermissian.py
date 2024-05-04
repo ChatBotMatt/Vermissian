@@ -65,6 +65,8 @@ class TestVermissian(unittest.TestCase):
                         game_data['less_lethal']
                     )
 
+            mock_get_from_spreadsheet_api.side_effect = None
+
     def test_add_game(self):
         self.assert_no_games()
 
