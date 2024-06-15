@@ -348,7 +348,7 @@ async def heart_fallout_command(
 
     await ctx.respond(response)
 
-@vermissian.slash_command(name='roll', description='Rolls dice')
+@vermissian.slash_command(name='roll', description='Rolls dice, using the same syntax as the non-command rolling')
 @command_logging_decorator
 @error_responder_decorator
 async def roll_command(

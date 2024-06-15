@@ -3,19 +3,24 @@ import json
 import random
 import functools
 import re
-from typing import List, Tuple, Dict, Optional, Set, Union, Literal, Iterable, Callable
+from typing import List, Tuple, Dict, Optional, Set, Union, Literal, Iterable
 
 from src.Vermissian import Vermissian
 from src.Game import Game, SpireGame, HeartGame
 from src.System import System
 from src.CharacterSheet import SpireSkill, SpireDomain, HeartSkill, HeartDomain
 from src.Roll import Roll
-from src.utils.format import bold, underline, code, quote, bullet, spoiler, no_embed
+from src.utils.format import bold, underline, code, quote, bullet, no_embed, strikethrough
 from src.utils.logger import get_logger
 from src.utils.exceptions import WrongGameError
 from extract_abilities import Ability
 
+# TODO Add Hammertime stuff? There's no API or calendar input, so tricky.
+
 class StressRollerView(discord.ui.View):
+    """
+    A view which allows the user to pick via buttons how much stress to roll.
+    """
 
     def __init__(self, * args, stress_sizes: List[int], ** kwargs):
         super().__init__(* args, ** kwargs)
@@ -31,16 +36,46 @@ class StressRollerView(discord.ui.View):
 
     @staticmethod
     async def roll_stress(interaction: discord.Interaction, stress_size: int):
-        await interaction.response.send_message(simple_roll([Roll(dice_size=stress_size, num_dice=1)], note='Stress'))
+        """
+        Rolls the stress and sends the output as a reply to the roll message.
+
+        :param interaction: The interaction with the button.
+        :param stress_size: The amount of stress to roll.
+        """
+
+        roll_to_do = Roll(dice_size=stress_size, num_dice=1)
+        result = simple_roll([roll_to_do], note='Stress')
+
+        await interaction.response.send_message(result)
+
+def get_changelog():
+    """
+    :help: Provides a version number and changelog.
+    """
+
+    message = f'''Version: 1.0.1
+
+{underline("Changes")}
+{bullet("Links now have different text to the URLs, for nicer readability.")}
+'''
+
+    return message
 
 def get_credits():
+    """
+    :help: Provides the credits for the dice bot - who helped bring it to life?
+    """
+
     message = '''The Vermissian dice bot is a project by jaffa6.
 
     The following people helped test it, and are responsible for making it a lot nicer to work with!'''
 
     testers = [
         'yuriAza',
-        f'SavvyWolf, who you can find at {no_embed("https://savvywolf.scot/")}'
+        f'SavvyWolf, who you can find at {no_embed("https://savvywolf.scot/")}',
+        'spatialwarp',
+        f'Ben K. Rosenbloom, {no_embed("https://benkrosenbloom.itch.io/")}', # TODO Potentially need to update these
+        'DayaLuna for being a great rubber duck'
     ]
 
     tester_components = []
@@ -67,7 +102,7 @@ This is an unofficial dice bot, designed for Spire and Heart, by jaffa6.
 
 You can find a list of available commands by using {code("/help")}. 
 
-The dice bot pulls data from character trackers (Spire) <https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing> or (Heart) <https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing> which you can copy and add your own characters to.
+The dice bot pulls data from character trackers ([Spire](<https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing>) or [Heart](<https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing>)) which you can copy and add your own characters to.
 
 It does require a fixed structure in the tracker, so please don't move stuff around in them or it might not work properly for you.
 
@@ -131,8 +166,8 @@ If you have any other questions or concerns, and {code("/help")} doesn't cover t
 def get_getting_started_page_content():
     getting_started_message = f'''To get started, use {code("/link")} to link the bot to your character tracker. It will automatically try to link users to characters. 
 
-* Spire Character Tracker Template <https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing>
-* Heart Character Tracker Template <https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing>
+* [Spire Character Tracker Template](<https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing>)
+* [Heart Character Tracker Template](<https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing>)
 
 Copy the template and fill in your own information. Linking works best once characters have Discord Usernames associated with them because it will auto-link to those users, but otherwise you can use {code("/ add_character")}
 
@@ -149,8 +184,7 @@ def get_commands_page_content(all_commands: Iterable[discord.ApplicationCommand]
 
     command_tokens = []
     for command in all_commands:
-        command_tokens.append(
-            f'{code("/" + command.qualified_name)} - {command.description if hasattr(command, "description") else "[No description given]"}')
+        command_tokens.append(f'{code("/" + command.qualified_name)} - {command.description if hasattr(command, "description") else "[No description given]"}')
 
     commands_message += '* ' + '\n* '.join(command_tokens)
 
@@ -163,7 +197,7 @@ def get_debugging_page_content():
 
     fix_steps = [
         'Ensure that your character tracker is up-to-date enough for the bot to work with it. It should have the "Discord Username" field in the character sheets and if it doesn\'t, it\'s not compatible.',
-        'Ensure that your character tracker\'s structure is identical to the master one located at (Spire) <https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing> or (Heart) <https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing> - if you move things around, or add new rows or columns that reposition stuff, it\'ll probably stop reading it correctly!',
+        'Ensure that your character tracker\'s structure is identical to the master one located at [Spire](<https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit?usp=sharing>) or [Heart](<https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit?usp=sharing>) - if you move things around, or add new rows or columns that reposition stuff, it\'ll probably stop reading it correctly!',
         'Wait a minute or so, then try again.'
     ]
 
@@ -257,7 +291,7 @@ def get_ability(ability: str, system: Optional[System] = None):
 
     lower_ability_to_use = ability_to_use.lower()
 
-    if system is not None:
+    if system is not None: # TODO Find closest match if no matches?
         system_abilities: Dict[str, Ability] = get_ability.abilities[system.value]
 
         if lower_ability_to_use in system_abilities:
