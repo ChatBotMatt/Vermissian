@@ -1,11 +1,15 @@
 import discord
 from discord.ext.pages import Page, Paginator
 
+import requests
+import dotenv
+
 import json
 import random
 import os
 import glob
 import functools
+import atexit
 from typing import Callable, Union
 
 from src.Vermissian import Vermissian
@@ -50,6 +54,8 @@ def error_responder_decorator(command: Callable):
         except Exception as e:
             logger.error(e, exc_info=True)
             await ctx.respond(f'An error was encountered. Please try the debugging steps in {code("/help")}. Sorry!')
+
+            send_email(str(e))
 
     return wrapper
 
@@ -475,9 +481,29 @@ async def on_message(message: discord.Message):
         except Exception as e:
             logger.error(e)
 
+def send_email(message: str):
+    response = requests.post(
+        url=F'https://api.mailgun.net/v3/{os.environ["MAILGUN_SANDBOX_DOMAIN_NAME"]}/messages',
+        auth=('api', os.environ['MAILGUN_API_KEY']),
+        data={
+            'from': f'Vermissian <mailgun@{os.environ["MAILGUN_SANDBOX_DOMAIN_NAME"]}>',
+            'to': os.environ['DEBUG_EMAIL'],
+            'subject': 'Vermissian Error',
+            'text': message
+        }
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
 def main():
     with open('credentials.json', 'r') as f:
         token = json.load(f)['token']
+
+    dotenv.load_dotenv()
+
+    atexit.register(send_email, message='Vermissian has stopped running.')
 
     for server_data_dir in glob.glob(os.path.join('servers', '*')):
         guild_id = int(server_data_dir.split(os.sep)[1])
