@@ -551,7 +551,7 @@ class HeartGame(Game):
             'clear': 'all stress'
         },
         'Minor': {
-            'threshold': 2,
+            'threshold': 1,
             'clear': 'all stress in the resistance'
         },
         'no': {
