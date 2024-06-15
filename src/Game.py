@@ -290,7 +290,7 @@ class SpireGame(Game):
         if has_domain:
             roll.num_dice += 1
 
-        highest, formatted_results, downgrade, total = self.simple_roll(roll)
+        highest, formatted_results, downgrade, total = self.roll(roll)
 
         outcome = self.get_result(highest, downgrade)
 
@@ -359,10 +359,11 @@ class SpireGame(Game):
         return downgrade, new_difficulty
 
     @classmethod
-    def simple_roll(cls, roll: Roll) -> Tuple[int, List[str], int, int]:
+    def roll(cls, roll: Roll) -> Tuple[int, List[str], int, int]:
         results = []
 
-        downgrade, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, roll.difficulty)
+        difficulty = roll.drop
+        downgrade, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, difficulty)
 
         num_dice = roll.num_dice - difficulty_to_use
 
@@ -598,7 +599,7 @@ class HeartGame(Game):
             self.character_sheets[character.discord_username] = character
 
     @classmethod
-    def simple_roll(cls, roll: Roll) -> Tuple[int, List[str], bool, int]:
+    def roll(cls, roll: Roll) -> Tuple[int, List[str], bool, int]:
         results = []
 
         for i in range(roll.num_dice):
@@ -608,7 +609,8 @@ class HeartGame(Game):
 
         highest = max(results)
 
-        use_difficult_actions_table, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, roll.difficulty)
+        difficulty = roll.cut
+        use_difficult_actions_table, difficulty_to_use = cls.compute_downgrade_difficulty(roll.num_dice, difficulty)
 
         indices_to_remove = []
         if use_difficult_actions_table:
@@ -650,7 +652,7 @@ class HeartGame(Game):
         if has_domain:
             roll.num_dice += 1
 
-        highest, formatted_results, use_difficult_actions_table, total = self.simple_roll(roll)
+        highest, formatted_results, use_difficult_actions_table, total = self.roll(roll)
 
         outcome = self.get_result(highest, use_difficult_actions_table)
 

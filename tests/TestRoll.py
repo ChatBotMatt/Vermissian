@@ -1,7 +1,8 @@
 import unittest
 import logging
 
-from src.Roll import Roll, NoSidesError, NoDiceError, WrongDifficultyError, NotARollError
+from src.Roll import Roll, NoSidesError, NoDiceError, NotARollError
+
 
 class TestRoll(unittest.TestCase):
 
@@ -16,24 +17,24 @@ class TestRoll(unittest.TestCase):
                 ),
 
                 'Roll 3d6, 1d4': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4),
-                    ], None),
+                                      Roll(num_dice=3, dice_size=6),
+                                      Roll(num_dice=1, dice_size=4),
+                                  ], None),
 
                 'Roll 3d6,1d4': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4),
-                    ], None),
+                                     Roll(num_dice=3, dice_size=6),
+                                     Roll(num_dice=1, dice_size=4),
+                                 ], None),
 
                 'Roll 3d60,10d4': ([
-                    Roll(num_dice=3, dice_size=60),
-                    Roll(num_dice=10, dice_size=4),
-                    ], None),
+                                       Roll(num_dice=3, dice_size=60),
+                                       Roll(num_dice=10, dice_size=4),
+                                   ], None),
 
                 'Roll 3d60,10d40': ([
-                    Roll(num_dice=3, dice_size=60),
-                    Roll(num_dice=10, dice_size=40),
-                    ], None),
+                                        Roll(num_dice=3, dice_size=60),
+                                        Roll(num_dice=10, dice_size=40),
+                                    ], None),
 
                 'Roll 3d6 4d4': (
                     [
@@ -61,96 +62,190 @@ class TestRoll(unittest.TestCase):
 
             'Modifiers': {
                 'Roll 3d6 + 1, 1d4': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4),
-                    ], None),
+                                          Roll(num_dice=3, dice_size=6, bonus=1),
+                                          Roll(num_dice=1, dice_size=4),
+                                      ], None),
 
                 'Roll 3d6 + 1, 1d4-2': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    ], None),
+                                            Roll(num_dice=3, dice_size=6, bonus=1),
+                                            Roll(num_dice=1, dice_size=4, penalty=2),
+                                        ], None),
 
                 'Roll 3d6 + 1, 1d4-2+3': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
-                    ], None),
+                                              Roll(num_dice=3, dice_size=6, bonus=1),
+                                              Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
+                                          ], None),
 
                 'Roll 3d6 + 1, 1d4 - 2 +3': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
-                    ], None),
+                                                 Roll(num_dice=3, dice_size=6, bonus=1),
+                                                 Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
+                                             ], None),
 
                 'Roll 3d6 + 1, 1d4 - 2 + 3': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
-                    ], None),
+                                                  Roll(num_dice=3, dice_size=6, bonus=1),
+                                                  Roll(num_dice=1, dice_size=4, penalty=2, bonus=3),
+                                              ], None),
 
                 'Roll 3d6 + 1 + 2 -1, 1d4': ([
-                    Roll(num_dice=3, dice_size=6, bonus=3, penalty=1),
-                    Roll(num_dice=1, dice_size=4),
-                    ], None),
+                                                 Roll(num_dice=3, dice_size=6, bonus=3, penalty=1),
+                                                 Roll(num_dice=1, dice_size=4),
+                                             ], None),
 
                 'Roll 3d6 + 1, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6, bonus=1),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
+                                                  Roll(num_dice=3, dice_size=6, bonus=1),
+                                                  Roll(num_dice=1, dice_size=4, penalty=2),
+                                                  Roll(num_dice=4, dice_size=10),
+                                              ], None),
 
                 'Roll 3d6 + 0, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
+                                                  Roll(num_dice=3, dice_size=6),
+                                                  Roll(num_dice=1, dice_size=4, penalty=2),
+                                                  Roll(num_dice=4, dice_size=10),
+                                              ], None),
 
                 'Roll 3d6 + 1 + 3, 1d4-2, 4d10': ([
-                    Roll(num_dice=3, dice_size=6, bonus=4),
-                    Roll(num_dice=1, dice_size=4, penalty=2),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None),
+                                                      Roll(num_dice=3, dice_size=6, bonus=4),
+                                                      Roll(num_dice=1, dice_size=4, penalty=2),
+                                                      Roll(num_dice=4, dice_size=10),
+                                                  ], None),
 
                 'Roll 3d6 + 51, 1d4-22, 4d10': ([
-                    Roll(num_dice=3, dice_size=6, bonus=51),
-                    Roll(num_dice=1, dice_size=4, penalty=22),
-                    Roll(num_dice=4, dice_size=10),
-                    ], None)
+                                                    Roll(num_dice=3, dice_size=6, bonus=51),
+                                                    Roll(num_dice=1, dice_size=4, penalty=22),
+                                                    Roll(num_dice=4, dice_size=10),
+                                                ], None)
             },
 
-            'Difficulty': {
-                'Roll 3d6 Difficulty 0': (
+            'Cut': {
+                'Roll 3d6 Cut 0': ([
+                                       Roll(num_dice=3, dice_size=6, cut=0),
+                                   ], None),
+                'Roll 3d6 Cut 1': ([
+                                       Roll(num_dice=3, dice_size=6, cut=1),
+                                   ], None),
+
+                'Roll 3d6, 1d4, Cut 0': ([
+                                             Roll(num_dice=3, dice_size=6, cut=0),
+                                             Roll(num_dice=1, dice_size=4, cut=0),
+                                         ], None),
+
+                'Roll 3d6, 1d4, Cut 1': ([
+                                             Roll(num_dice=3, dice_size=6, cut=1),
+                                             Roll(num_dice=1, dice_size=4, cut=1),
+                                         ], None)
+            },
+
+            'Drop': {
+                'Roll 3d6 Drop 0': (
                     [
-                      Roll(num_dice=3, dice_size=6, difficulty=0),
+                        Roll(num_dice=3, dice_size=6, drop=0),
+                    ], 
+                    None
+                ),
+                
+                'Roll 3d6 Drop 1': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=1),
+                    ], 
+                    None
+                ),
+
+                'Roll 3d6, 1d4, Drop 0': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=0),
+                        Roll(num_dice=1, dice_size=4, drop=0),
+                    ], 
+                    None
+                ),
+
+                'Roll 3d6, 1d4, Drop 1': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=1),
+                        Roll(num_dice=1, dice_size=4, drop=1),
+                    ], 
+                    None
+                )
+            },
+
+            'Multiple Cuts': {
+                'Roll 3d6 Cut 1 Cut 2': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=2),
                     ],
                     None
                 ),
-                'Roll 3d6 Difficulty 1': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=1),
-                    ], None),
 
-                'Roll 3d6 Difficulty 1 Difficulty 2': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=2),
-                    ], None),
-
-                'Roll 3d6, 1d4, Difficulty 0': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=0),
-                    Roll(num_dice=1, dice_size=4, difficulty=0),
-                    ], None),
-
-                'Roll 3d6, 1d4, Difficulty 1': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=1),
-                    Roll(num_dice=1, dice_size=4, difficulty=1),
-                    ], None)
+                'Roll 3d6, 1d4, Cut 1, Cut 2': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=2),
+                        Roll(num_dice=1, dice_size=4, cut=2),
+                    ],
+                    None
+                ),
             },
 
-            'Multiple Difficulties': {
-                'Roll 3d6, 1d4, Difficulty 1, Difficulty 2': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=2),
-                    Roll(num_dice=1, dice_size=4, difficulty=2),
-                    ], None),
+            'Multiple Drops': {
+                'Roll 3d6 Drop 1 Drop 2': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=2),
+                    ],
+                    None
+                ),
 
-                'Roll 3d6, 1d4, Difficulty 1 Difficulty 2': ([
-                    Roll(num_dice=3, dice_size=6, difficulty=2),
-                    Roll(num_dice=1, dice_size=4, difficulty=2),
-                    ], None)
+                'Roll 3d6, 1d4, Drop 1, Drop 2': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=2),
+                        Roll(num_dice=1, dice_size=4, drop=2),
+                    ],
+                    None
+                ),
+            },
+
+            'Cut and Drop': {
+                'Roll 3d6 Cut 1 Drop 2': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=1, drop=2),
+                    ],
+                    None
+                ),
+
+                'Roll 3d6, 1d4, Cut 1, Drop 1': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=1, drop=1),
+                        Roll(num_dice=1, dice_size=4, cut=1, drop=1),
+                    ],
+                    None
+                ),
+
+                'Roll 3d6, 1d4, Cut 2, Drop 1': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=2, drop=1),
+                        Roll(num_dice=1, dice_size=4, cut=2, drop=1),
+                    ],
+                    None
+                ),
+
+                'Roll 3d6, 1d4, Drop 2, Cut 1': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=1, drop=2),
+                        Roll(num_dice=1, dice_size=4, cut=1, drop=2),
+                    ],
+                    None
+                ),
+
+                'Roll 3d6 cut 5': (
+                    [
+                        Roll(num_dice=3, dice_size=6, cut=5),
+                    ],
+                    None
+                ),
+
+                'Roll 3d6 drop 5': (
+                    [
+                        Roll(num_dice=3, dice_size=6, drop=5),
+                    ],
+                    None
+                ),
             },
 
             'Comments': {
@@ -163,41 +258,32 @@ class TestRoll(unittest.TestCase):
                     "This is a roll to pick a lock"
                 ),
 
-                'Roll 3d6 + 1, 1d4-2, 4d10 Difficulty 1 # This is a roll to pick a lock': (
+                'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1 # This is a roll to pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, difficulty=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, difficulty=1),
-                        Roll(num_dice=4, dice_size=10, difficulty=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
+                        Roll(num_dice=4, dice_size=10, cut=1),
                     ],
                     "This is a roll to pick a lock"
                 ),
 
-                'Roll 3d6 + 1, 1d4-2, 4d10 Difficulty 1# This is a roll to pick a lock': (
+                'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1# This is a roll to pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, difficulty=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, difficulty=1),
-                        Roll(num_dice=4, dice_size=10, difficulty=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
+                        Roll(num_dice=4, dice_size=10, cut=1),
                     ],
                     "This is a roll to pick a lock"
                 ),
 
-                'Roll 3d6 + 1, 1d4-2, 4d10 Difficulty 1# This is a roll to # pick a lock': (
+                'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1# This is a roll to # pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, difficulty=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, difficulty=1),
-                        Roll(num_dice=4, dice_size=10, difficulty=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
+                        Roll(num_dice=4, dice_size=10, cut=1),
                     ],
                     "This is a roll to # pick a lock"
                 ),
-
-                'roll 3d6 + 1, 1d4-2, 4d10 Difficulty 1# This is a roll to # pick a lock': (
-                    [
-                        Roll(num_dice=3, dice_size=6, bonus=1, difficulty=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, difficulty=1),
-                        Roll(num_dice=4, dice_size=10, difficulty=1),
-                    ],
-                    "This is a roll to # pick a lock"
-                )
             }
         }
 
@@ -215,8 +301,9 @@ class TestRoll(unittest.TestCase):
                 ('Roll 3d6 + 3.5, 1d4-2.5, 4d10', ValueError),
                 ('Roll 3d6 + a, 1d4-2, 4d10', ValueError),
                 ('Roll 3d6 - a, 1d4-2, 4d10', ValueError),
-                ('Roll 3d6 - a, 1d4-2, 4d10, Difficulty 1', ValueError),
-                ('Roll 3d6, 1d4-2, 4d10, Difficulty 1.5', ValueError),
+                ('Roll 3d6 - a, 1d4-2, 4d10, Cut 1', ValueError),
+                ('Roll 3d6, 1d4-2, 4d10, Cut 1.5', ValueError),
+                ('Roll 3d6, 1d4-2, 4d10, Drop 1.5', ValueError)
             ],
 
             'Wrong order': [
@@ -224,20 +311,21 @@ class TestRoll(unittest.TestCase):
             ],
 
             'Missing Data': [
-                'Roll 3d6, 1d4, Difficulty',
-                'Roll 3d6, 1d4, Diff',
+                'Roll 3d6, 1d4, Cut',
+                'Roll 3d6, 1d4, Drop',
                 ('# This is a roll to pick a lock', NotARollError),
                 'Roll 3d',
                 'Roll',
                 'Roll ',
+                ('Roll -1d6', NoDiceError),
+                # 'Roll +3d6', # TODO Hugely an edge case, and can't figure out how to handle the general case without messing up the delimiters.
                 ('Roll 0d6', NoDiceError),
                 ('Roll 3d0', NoSidesError),
                 ('Roll 0d0', NoDiceError),
-                ('Roll 3d6 Difficulty 3', WrongDifficultyError),
                 ('apples', NotARollError),
-                # ('Roll 3d-1', NoSidesError) # TODO Can't get this to parse nicely
-                'Roll 3d-1',
-                'Roll 3d+1'
+                ('Roll 3d-1', NoSidesError),
+                # ('Roll 3d-', NoSidesError),  # TODO Can't get this to parse nicely, so it's a ValueError instead.
+                'Roll 3d+1',
             ]
         }
 
@@ -289,7 +377,8 @@ class TestRoll(unittest.TestCase):
                         roll_str_to_use = roll_str
                         expected_exception_cls = ValueError
 
-                    with self.subTest(f'Testing "{roll_str_to_use}" with "{transformer}"', roll_str=roll_str_to_use, expected_exception_cls=expected_exception_cls, transformer=transformer):
+                    with self.subTest(f'Testing "{roll_str_to_use}" with "{transformer}"', roll_str=roll_str_to_use,
+                                      expected_exception_cls=expected_exception_cls, transformer=transformer):
                         transformed = transformation(roll_str_to_use)
 
                         self.assertRaises(
@@ -303,6 +392,7 @@ class TestRoll(unittest.TestCase):
 
     def tearDown(self) -> None:
         logging.disable(logging.NOTSET)
+
 
 if __name__ == '__main__':
     unittest.main()

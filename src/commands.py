@@ -1018,7 +1018,7 @@ def roll_spire_action(
 
     num_dice += num_helpers
 
-    roll = Roll(num_dice=num_dice, dice_size=dice_size, difficulty=difficulty)
+    roll = Roll(num_dice=num_dice, dice_size=dice_size, drop=difficulty)
 
     downgrade_expression = ''
 
@@ -1071,7 +1071,7 @@ def roll_heart_action(game: HeartGame, username: str, skill: str, domain: str, m
 
     num_dice += num_helpers
 
-    roll = Roll(num_dice=num_dice, dice_size=dice_size, difficulty=difficulty)
+    roll = Roll(num_dice=num_dice, dice_size=dice_size, cut=difficulty)
 
     downgrade_expression = ''
 
@@ -1145,25 +1145,53 @@ def heart_fallout(game: HeartGame, username: str):
     return response
 
 def simple_roll(rolls: List[Roll], note: Optional[str] = None):
-    all_results = []
-    overall_highest = 0
+    all_formatted = []
     overall_total = 0
     rolled_expression_tokens = []
-    all_results_tokens = []
+    all_results_expressions = []
 
-    # TODO Shouldn't be hardcoded Spire, but need to figure out how I want Difficulty to work outside of game rolls.
-    # Have syntax for discard X highest and for simply discard X?
+    total_num_dice_rolled = sum(roll.num_dice - roll.drop for roll in rolls)
     for index, roll in enumerate(rolls):
-        highest, results, _, total = SpireGame.simple_roll(roll)
+        results = []
 
-        all_results.append(results)
-        overall_highest = max(highest, overall_highest)
+        if (roll.num_dice - roll.drop) > 0:
+            for i in range(roll.num_dice - roll.drop):
+                result = random.randint(1, roll.dice_size)
 
-        expression = str(roll) if index == len(rolls) - 1 else roll.str_no_difficulty()
+                results.append(result)
+
+            indices_to_remove = []
+            highest = max(results)
+
+            if roll.cut > 0:
+                sorted_results = sorted(enumerate(results), key=lambda r: r[1])
+
+                for remove_index, roll_to_remove in sorted_results[- roll.cut: ]:
+                    indices_to_remove.append(remove_index)
+
+                kept_results = [value for index, value in enumerate(results) if index not in indices_to_remove]
+
+                if len(kept_results):
+                    effective_highest = max(kept_results)
+                else:
+                    effective_highest = 0
+            else:
+                effective_highest = highest
+                kept_results = results
+
+            formatted_rolls = Game.format_roll(results, indices_to_remove, effective_highest)
+
+            total = sum(kept_results) + roll.bonus - roll.penalty
+        else:
+            formatted_rolls = ['']
+            total = 0
+            effective_highest = 0
+
+        expression = str(roll) if index == len(rolls) - 1 else roll.str_no_cut_drop()
 
         rolled_expression_tokens.append(expression)
 
-        results_expression = '{' + ', '.join(results) + '}'
+        results_expression = '{' + ', '.join(formatted_rolls) + '}'
 
         if roll.bonus > 0:
             results_expression += f' + {roll.bonus}'
@@ -1171,35 +1199,33 @@ def simple_roll(rolls: List[Roll], note: Optional[str] = None):
         if roll.penalty > 0:
             results_expression += f' - {roll.penalty}'
 
-        modified_total = total + roll.bonus - roll.penalty
+        total_expression = f' (Total: {total})' if total_num_dice_rolled > 1 else ''
+        results_expression += f' = **{effective_highest + roll.bonus - roll.penalty}**{total_expression}'
 
-        total_expression = f' (Total: {modified_total})' if len(rolls) > 1 else ''
+        all_results_expressions.append(results_expression)
 
-        results_expression += f' = **{highest + roll.bonus - roll.penalty}**{total_expression}'
-
-        all_results_tokens.append(
-            results_expression
-        )
-
-        overall_total += modified_total
+        all_formatted.append(formatted_rolls)
+        overall_total += total
 
     rolled_expression = ', '.join(rolled_expression_tokens)
 
-    response = f'You rolled {rolled_expression}{f" ({note})" if note is not None else ""}: '
+    note_expression = f'{quote(note)}\n\n' if note is not None and len(note.strip()) else ''
 
-    if len(all_results_tokens) > 1:
+    response = f'''{note_expression}You rolled {rolled_expression}: '''
+
+    if len(all_results_expressions) > 1:
         response += '\n'
 
-    for results_expression in all_results_tokens:
-        if len(all_results_tokens) > 1:
+    for results_expression in all_results_expressions:
+        if len(all_results_expressions) > 1:
             response += '* '
 
         response += results_expression
 
-        if len(all_results_tokens) > 1:
+        if len(all_results_expressions) > 1:
             response += '\n'
 
-    if len(all_results_tokens) > 1:
+    if len(all_results_expressions) > 1:
         response += f'**Overall Total**: {overall_total}'
 
     return response
@@ -1236,3 +1262,53 @@ def link(vermissian: Vermissian, guild_id: int, system: System, spreadsheet_url:
         response += f'\nNo characters linked yet, you can do so via the {code("/add_character")} command.'
 
     return response
+
+def help_roll():
+
+    four_d_ten_results = [4, 6, 7, 2]
+    four_d_ten_results_cut = [4, 6, strikethrough(7), 2]
+    four_d_ten_results_drop = four_d_ten_results[:-1]
+    four_d_ten_results_drop_cut = four_d_ten_results_cut[:-1]
+
+    four_d_ten_results_cut = str(four_d_ten_results_cut).replace("'", "")
+    four_d_ten_results_drop_cut = str(four_d_ten_results_drop_cut).replace("'", "")
+
+    three_d_six_results = [1, 5, 3]
+    three_d_six_results_cut = [1, strikethrough(5), 3]
+    three_d_six_results_drop = three_d_six_results[:-1]
+
+    three_d_six_results_cut = str(three_d_six_results_cut).replace("'", "")
+
+    help_components = f'''Individual roll expressions should be separated with {code("+")}, {code("-")}, {code(",")}, or a space.
+    
+All of the below is not case-sensitive - capitalisation {bold("doesn't")} matter. 
+
+{underline("Individual roll components")}
+These are applied on the level of an individual roll expression, e.g. to {code('3d6')} in {code('3d6 + 1, 1d8')}.
+ 
+{bullet(code("3d8") + f" - The dice to roll. Should be in the form {code('XdY')} where X is the number of dice to roll and Y is how many sides they have. E.g. {code('3d8')} rolls three 8-sided dice.")}
+{bullet(code("+X") + " or " + code("-X")  + f" where X is an integer. Adds or subtracts that much from the previous roll. E.g. {code('3d6 + 2 - 3')}")}
+
+{underline("Global roll components")}
+These are applied on the level of {bold("all")} of the rolls, e.g. to both {code('3d6')} and {code('1d8')} in {code('3d6, 1d8 Cut 1')}. 
+
+{bullet(code("Drop X") + f" where X is an integer. Removes X dice from each pool before rolling.E.g. {code('3d6, 2d8 drop 1')} will roll {bold('2')}d6 and {bold('1')}d8. Essentially, it's Spire Difficulty.")}
+{bullet(code("Cut X") + f" where X is an integer. Rolls the dice, then removes X of the highest values from each set of rolled dice. E.g. {code('3d6, 2d8 cut 1')} will roll 3 dice and remove the highest from that pool, then do the same for the 2d8 pool. Essentially, it's Heart Difficulty.")}
+{bullet(code("# Some Comment") + f" adds a note to the roll, e.g. to indicate what it's for. E.g. {code('3d6 # Roll to kill the hydra')}")}
+
+Each roll will have its highest value highlighted, and its total.'''
+
+    help_examples = f'''{bullet(code("roll 4d10") + f"- Rolls 4d10. {bold('Example results:')} {{ {four_d_ten_results } }}")}
+{bullet(code("roll 4d10, 3d6") + f"- Rolls 4d10 and 3d6. {bold('Example results:')} {{ {four_d_ten_results}, {three_d_six_results } }}")}
+{bullet(code("roll 4d10, 3d6 Drop 1") + f"- Rolls {bold('3')}d10 and {bold('2')}d6, one dice dropped from each initial pool of dice. {bold('Example results:')} {{ {four_d_ten_results_drop}, {three_d_six_results_drop } }}.")}
+{bullet(code("roll 4d10, 3d6 Cut 1") + f"- Rolls 4d10 and 3d6, removing the highest rolled result from each. {bold('Example results:')} {{ {four_d_ten_results_cut}, {three_d_six_results_cut } }}.")}
+{bullet(code("roll 4d10 Drop 1 Cut 1") + f"- Rolls {bold('3')}d10 and removing the highest rolled result. {bold('Example results:')} {{ {four_d_ten_results_drop_cut } }}.")}
+{bullet(code("roll 4d10 + 3") + f"- Rolls 4d10 and adds 3 to the {bold('total')} value of the 4d10 rolled. {bold('Example results:')} {{ {four_d_ten_results} + 3 }}.")}
+{bullet(code("roll 4d10 + 3, 3d6") + f"- Rolls 4d10 and adds 3 to the {bold('total')} value of the 4d10 rolled, but {bold('not')} to the 3d6. {bold('Example results:')} {{ {four_d_ten_results} + 3, {three_d_six_results } }}.")}
+{bullet(code("roll 4d10 - 3") + f"- Rolls 4d10 and subtracts 3 from the {bold('total')} value rolled. {bold('Example results:')} {{ {four_d_ten_results} - 3 }}.")}
+{bullet(code("roll 4d10 # Seduce the Angel") + f"- Rolls 4d10 adds the given note (everything after {code('#')}) to it")}. {bold('Example results:')} (Roll to compel the Angel not to murder us) {{ {four_d_ten_results} }}'''
+
+    return [
+        ('Components', help_components),
+        ('Examples', help_examples)
+    ]

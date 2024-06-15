@@ -162,7 +162,7 @@ class TestHeartGame(unittest.TestCase):
                     )
 
     @unittest.mock.patch('src.Game.HeartGame.compute_downgrade_difficulty')
-    def test_simple_roll(self, mock_downgrade_difficulty: unittest.mock.Mock):
+    def test_roll(self, mock_downgrade_difficulty: unittest.mock.Mock):
         for num_dice in range(1, 5):
             for difficulty in range(0, 3):
                 for bonus in range(-2, 3):
@@ -170,7 +170,7 @@ class TestHeartGame(unittest.TestCase):
                         roll = Roll(
                             num_dice=num_dice,
                             dice_size=10,
-                            difficulty=difficulty,
+                            cut=difficulty,
                             bonus=bonus,
                             penalty=penalty
                         )
@@ -180,10 +180,10 @@ class TestHeartGame(unittest.TestCase):
 
                         mock_downgrade_difficulty.return_value = (mock_use_difficult_actions_table, mock_new_difficulty)
 
-                        effective_highest, formatted_results, use_difficult_actions_table, total = HeartGame.simple_roll(roll)
+                        effective_highest, formatted_results, use_difficult_actions_table, total = HeartGame.roll(roll)
 
                         with self.subTest(f'Uses downgrade difficulty - {roll}'):
-                            mock_downgrade_difficulty.assert_called_with(roll.num_dice, roll.difficulty)
+                            mock_downgrade_difficulty.assert_called_with(roll.num_dice, roll.cut)
 
                         with self.subTest(f'Difficult Actions Table correctly provided - {roll}'):
                             self.assertEqual(
@@ -220,7 +220,7 @@ class TestHeartGame(unittest.TestCase):
                 roll = Roll(
                     num_dice=num_dice,
                     dice_size=10,
-                    difficulty=difficulty
+                    cut=difficulty
                 )
 
                 for skill in HeartSkill:

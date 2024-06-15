@@ -8,14 +8,15 @@ class Roll:
     Represents a roll to make.
     """
 
-    def __init__(self, num_dice: int, dice_size: int, difficulty: int = 0, bonus: int = 0, penalty: int = 0):
+    def __init__(self, num_dice: int, dice_size: int, cut: int = 0, drop: int = 0, bonus: int = 0, penalty: int = 0):
         self.num_dice = num_dice
         self.dice_size = dice_size
-        self.difficulty = difficulty
+        self.cut = cut
+        self.drop = drop
         self.bonus = bonus
         self.penalty = penalty
 
-    def str_no_difficulty(self) -> str:
+    def str_no_cut_drop(self) -> str:
         s = f'{self.num_dice}d{self.dice_size}'
 
         if self.bonus > 0:
@@ -27,12 +28,18 @@ class Roll:
         return s
 
     def __str__(self):
-        s = self.str_no_difficulty()
+        s = self.str_no_cut_drop()
 
-        if self.difficulty > 0:
-            s += f' Difficulty {self.difficulty}'
+        if self.drop > 0:
+            s += f' Drop {self.drop}'
+
+        if self.cut > 0:
+            s += f' Cut {self.cut}'
 
         return s
+
+    def __eq__(self, other: 'Roll') -> bool:
+        return self.__dict__ == other.__dict__
 
     @property
     def num_dice(self):
@@ -56,24 +63,9 @@ class Roll:
 
         self._dice_size = dice_size
 
-    @property
-    def difficulty(self):
-        return self._difficulty
-
-    @difficulty.setter
-    def difficulty(self, difficulty: int):
-        if difficulty < 0 or difficulty > 2:
-            raise WrongDifficultyError(difficulty=difficulty)
-
-        self._difficulty = difficulty
-
-    def __eq__(self, other: 'Roll') -> bool:
-        return self.__dict__ == other.__dict__
-
     @classmethod
     def parse_roll(cls, roll_str: str) -> Tuple[List['Roll'], Optional[str]]:
         rolls = []
-        difficulty = 0
 
         if not roll_str.lower().strip().startswith('roll'):
             raise NotARollError()
@@ -96,17 +88,19 @@ class Roll:
 
             '(\d)D(\d)': r'\1d\2', # Normalise casing of the d for dice.
 
-            '(?: *,? *)diff(?:iculty)? (\d+)': r', difficulty_\1', # Normalise difficulty marker and combine it with the value.
+            '(?: *,? *)cut? (\d+)': r', cut_\1', # Normalise cut marker and combine it with the value.
+
+            '(?: *,? *)drop? (\d+)': r', drop_\1',  # Normalise drop marker and combine it with the value.
 
             ' ?\+ ?(\d+)d(\d)': r', \1d\2',  # Normalise "+"-delimited dice to be comma-delimited.
 
             ' ?\+ ?(\d+)': r' +_\1', # Combine + with its value.
 
-            ' ?- ?(\d+)': r' -_\1', # Combne - with its value.
+            '(?<!d) ?- ?(\d+)(?!d[-+]?\d+)': r' -_\1', # Combine - with its value, unless its on the left of a dice expression.
 
-            ',? ?(\d+)?d(\d+)': r', \1d\2', # Normalise potentially-missing spaces and commas to properly separate dice
+            ',? ?([-+]?\d+)?d(\d+)': r', \1d\2', # Normalise potentially-missing spaces and commas to properly separate dice
 
-            'roll,': 'roll' # Remove extraneous commmas
+            'roll,': 'roll' # Remove extraneous commas
         }
 
         formatted_roll_str = note_parsed_roll_str
@@ -122,69 +116,93 @@ class Roll:
 
         tokens = [token.strip().lower() for token in trimmed_roll_str.split(',')]
 
+        cut = 0
+        drop = 0
         for token in tokens:
-            difficulty_match = re.fullmatch(
-                'difficulty_(\d+)',
+            cut_match = re.fullmatch(
+                'cut_(\d+)',
                 token
             )
 
-            if difficulty_match is None:
-                subtokens = [subtoken.strip() for subtoken in token.split(' ')]
-
-                roll_match = re.fullmatch(
-                    '(\d+)?d(\d+)',
-                    subtokens[0]
+            if cut_match is None:
+                drop_match = re.fullmatch(
+                    'drop_(\d+)',
+                    token
                 )
 
-                if roll_match is None:
-                    invalid_roll_match = re.fullmatch(
-                        '(\d+)?d([+\-]\d+)',
+                if drop_match is None:
+                    subtokens = [subtoken.strip() for subtoken in token.split(' ')]
+
+                    roll_match = re.fullmatch(
+                        '(\d+)?d(\d+)',
                         subtokens[0]
                     )
 
-                    if invalid_roll_match is not None:
-                        raise NoSidesError(dice_size=invalid_roll_match.group(2))
-                    else:
-                        raise ValueError(f'First token must be a roll. Roll str was "{roll_str}", formatted to "{formatted_roll_str}", and first token was "{subtokens[0]}" in "{subtokens}".')
-                else:
-                    if roll_match.group(1) is None:
-                        num_dice = 1
+                    if roll_match is None:
+                        non_positive_num_dice_match = re.fullmatch(
+                            '(0|(?:-\d*))d([+\-]?\d+)',
+                            subtokens[0]
+                        )
+
+                        if non_positive_num_dice_match is not None:
+                            raise NoDiceError(num_dice=non_positive_num_dice_match.group(1))
+                        else:
+                            leading_plus_num_dice_match = re.fullmatch(
+                                '(\+\d*)d([+\-]?\d+)',
+                                subtokens[0]
+                            )
+
+                            if leading_plus_num_dice_match is not None:
+                                raise ValueError(f'Cannot have a leading plus in the dice expression.')
+                            else:
+                                invalid_roll_match = re.fullmatch(
+                                    '(\d+)?d([+\-]\d+)',
+                                    subtokens[0]
+                                )
+
+                                if invalid_roll_match is not None:
+                                    raise NoSidesError(dice_size=invalid_roll_match.group(2))
+                                else:
+                                    raise ValueError(f'First token must be a roll. Roll str was "{roll_str}", formatted to "{formatted_roll_str}", and first token was "{subtokens[0]}" in "{subtokens}".')
                     else:
                         num_dice = int(roll_match.group(1))
 
-                    dice_size = int(roll_match.group(2))
+                        dice_size = int(roll_match.group(2))
 
-                    bonus = 0
-                    penalty = 0
+                        bonus = 0
+                        penalty = 0
 
-                    if len(subtokens) > 1:
-                        for subtoken in subtokens[1:]:
-                            bonus_match = re.fullmatch(
-                                '\+_(\d+)',
-                                subtoken.strip()
-                            )
-
-                            if bonus_match is None:
-                                penalty_match = re.fullmatch(
-                                    '-_(\d+)',
+                        if len(subtokens) > 1:
+                            for subtoken in subtokens[1:]:
+                                bonus_match = re.fullmatch(
+                                    '\+_(\d+)',
                                     subtoken.strip()
                                 )
 
-                                if penalty_match is not None:
-                                    penalty += int(penalty_match.group(1))
+                                if bonus_match is None:
+                                    penalty_match = re.fullmatch(
+                                        '-_(\d+)',
+                                        subtoken.strip()
+                                    )
+
+                                    if penalty_match is not None:
+                                        penalty += int(penalty_match.group(1))
+                                    else:
+                                        raise ValueError(f'Invalid subtoken found: "{subtoken}" in "{roll_str}" that was formatted to "{formatted_roll_str}".')
                                 else:
-                                    raise ValueError(f'Invalid subtoken found: "{subtoken}" in "{roll_str}" that was formatted to "{formatted_roll_str}".')
-                            else:
-                                bonus += int(bonus_match.group(1))
+                                    bonus += int(bonus_match.group(1))
 
-                    roll = Roll(num_dice=num_dice, dice_size=dice_size, bonus=bonus, penalty=penalty)
+                        roll = Roll(num_dice=num_dice, dice_size=dice_size, bonus=bonus, penalty=penalty)
 
-                    rolls.append(roll)
+                        rolls.append(roll)
 
+                else:
+                    drop = drop_match.group(1)
             else:
-                difficulty = difficulty_match.group(1)
+                cut = cut_match.group(1)
 
         for roll in rolls:
-            roll.difficulty = int(difficulty)
+            roll.cut = int(cut)
+            roll.drop = int(drop)
 
         return rolls, note

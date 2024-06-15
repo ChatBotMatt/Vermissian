@@ -19,7 +19,8 @@ from src.utils.exceptions import VermissianError, NoCharacterError, NoGameError
 from src.commands import get_credits, get_legal, get_privacy_policy, get_about, get_donate, \
     get_commands_page_content, get_getting_started_page_content, get_debugging_page_content, \
     get_tag, get_character_list, get_ability, get_delve_draw, link, unlink, \
-    spire_fallout, roll_spire_action, heart_fallout, roll_heart_action, add_character, log_suggestion, simple_roll
+    spire_fallout, roll_spire_action, heart_fallout, roll_heart_action, add_character, log_suggestion, simple_roll, \
+    help_roll, get_changelog
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -165,7 +166,7 @@ async def privacy_policy_command(
 @command_logging_decorator
 @error_responder_decorator
 async def help_command(
-    ctx: discord.ApplicationContext,
+    ctx: discord.ApplicationContext
 ):
 
     raw_pages = [
@@ -187,7 +188,7 @@ async def help_command(
             page_content += f'\n\nPrevious: {headers[page_index - 1]}'
 
         if page_index < len(raw_pages) - 1:
-            page_content += f'\n\nNext: {headers[page_index + 1]}'
+            page_content += f'\n\nNext: {bold(headers[page_index + 1])}'
 
         pages.append(Page(content=page_content, embeds=[]))
 
@@ -368,7 +369,36 @@ async def roll_command(
         await ctx.respond(str(e))
     except ValueError as v:
         logger.warning(v, exc_info=True)
-        await ctx.respond('Cannot understand that roll. Please define each roll as XdY +A -B, and separate them with "+" or ",". You can specify a "Difficulty" of 0-2 to remove that many of the highest dice, and use # to add a note.', ephemeral=True)
+        await ctx.respond(
+            'Cannot understand that roll.\n\n' + help_roll(),
+        )
+
+@vermissian.slash_command(name='help_roll', description='Provides help text for rolling.')
+@command_logging_decorator
+@error_responder_decorator
+async def help_roll_command(ctx: discord.ApplicationContext):
+    raw_pages = help_roll()
+
+    headers = [
+        raw_page[0] for raw_page in raw_pages
+    ]
+
+    pages = []
+
+    for page_index, (page_header, raw_page_content) in enumerate(raw_pages):
+        page_content = f'{bold(underline(page_header))}\n\n{raw_page_content}'
+
+        if page_index > 0:
+            page_content += f'\n\nPrevious: {headers[page_index - 1]}'
+
+        if page_index < len(raw_pages) - 1:
+            page_content += f'\n\nNext: {bold(headers[page_index + 1])}'
+
+        pages.append(Page(content=page_content, embeds=[]))
+
+    paginator = Paginator(pages)
+
+    await paginator.respond(ctx.interaction, ephemeral=True)
 
 @vermissian.slash_command(name='unlink', description='Unlinks game information from the current server, undoing the last /link')
 @command_logging_decorator
@@ -406,6 +436,20 @@ async def link_command(
     response = link(vermissian, ctx.guild_id, system, spreadsheet_url, less_lethal)
 
     await interaction.edit(content=response)
+
+@vermissian.slash_command(name='changelog', description='Provides a changelog and version number.')
+@command_logging_decorator
+@error_responder_decorator
+async def link_command(
+    ctx: discord.ApplicationContext
+):
+    """
+    Provides a changelog and version number.
+    """
+
+    changelog = get_changelog()
+
+    await ctx.respond(changelog, ephemeral=True)
 
 @vermissian.event
 async def on_ready():

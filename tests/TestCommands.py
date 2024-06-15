@@ -15,7 +15,7 @@ from src.Vermissian import Vermissian
 from src.commands import get_credits, get_ability, get_tag, get_about, get_legal, get_donate, get_delve_draw, \
     get_commands_page_content, get_debugging_page_content, get_getting_started_page_content, \
     get_full_card_name, get_privacy_policy, get_character_list, log_suggestion, format_ability, pick_delve_draw_card, \
-    spire_fallout, roll_spire_action, roll_heart_action, simple_roll, heart_fallout, link, unlink
+    spire_fallout, roll_spire_action, roll_heart_action, simple_roll, heart_fallout, link, unlink, help_roll
 from src.utils.exceptions import BadCharacterKeeperError
 from extract_abilities import Ability
 

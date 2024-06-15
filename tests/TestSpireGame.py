@@ -229,7 +229,7 @@ class TestSpireGame(unittest.TestCase):
                 roll = Roll(
                     num_dice=original_num_dice,
                     dice_size=10,
-                    difficulty=difficulty
+                    drop=difficulty
                 )
 
                 for skill in SpireSkill:
@@ -278,7 +278,7 @@ class TestSpireGame(unittest.TestCase):
                                         expected_downgrade
                                     )
 
-    def test_simple_roll(self):
+    def test_roll(self):
         for num_dice in range(1, 5):
             for difficulty in range(0, 3):
                 for bonus in range(-2, 3):
@@ -286,7 +286,7 @@ class TestSpireGame(unittest.TestCase):
                         roll = Roll(
                             num_dice=num_dice,
                             dice_size=10,
-                            difficulty=difficulty,
+                            drop=difficulty,
                             bonus=bonus,
                             penalty=penalty
                         )
@@ -296,7 +296,7 @@ class TestSpireGame(unittest.TestCase):
                         else:
                             expected_downgrade = (difficulty - num_dice) + 1
 
-                        effective_highest, formatted_results, downgrade, total = SpireGame.simple_roll(roll)
+                        effective_highest, formatted_results, downgrade, total = SpireGame.roll(roll)
 
                         with self.subTest(f'Downgrade computed properly - {roll}'):
                             self.assertEqual(
