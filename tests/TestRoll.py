@@ -1,8 +1,10 @@
 import unittest
+import unittest.mock
+
 import logging
+from typing import Union
 
-from src.Roll import Roll, NoSidesError, NoDiceError, NotARollError
-
+from src.Roll import Roll, Cut, NoSidesError, NoDiceError, NotARollError
 
 class TestRoll(unittest.TestCase):
 
@@ -118,20 +120,20 @@ class TestRoll(unittest.TestCase):
 
             'Cut': {
                 'Roll 3d6 Cut 0': ([
-                                       Roll(num_dice=3, dice_size=6, cut=0),
+                                       Roll(num_dice=3, dice_size=6, cut=Cut(num=0, threshold=0)),
                                    ], None),
                 'Roll 3d6 Cut 1': ([
-                                       Roll(num_dice=3, dice_size=6, cut=1),
+                                       Roll(num_dice=3, dice_size=6, cut=Cut(num=1, threshold=0)),
                                    ], None),
 
                 'Roll 3d6, 1d4, Cut 0': ([
-                                             Roll(num_dice=3, dice_size=6, cut=0),
-                                             Roll(num_dice=1, dice_size=4, cut=0),
+                                             Roll(num_dice=3, dice_size=6, cut=Cut(num=0, threshold=0)),
+                                             Roll(num_dice=1, dice_size=4, cut=Cut(num=0, threshold=0)),
                                          ], None),
 
                 'Roll 3d6, 1d4, Cut 1': ([
-                                             Roll(num_dice=3, dice_size=6, cut=1),
-                                             Roll(num_dice=1, dice_size=4, cut=1),
+                                             Roll(num_dice=3, dice_size=6, cut=Cut(num=1, threshold=0)),
+                                             Roll(num_dice=1, dice_size=4, cut=Cut(num=1, threshold=0)),
                                          ], None)
             },
 
@@ -170,15 +172,15 @@ class TestRoll(unittest.TestCase):
             'Multiple Cuts': {
                 'Roll 3d6 Cut 1 Cut 2': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=2),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=2, threshold=0)),
                     ],
                     None
                 ),
 
                 'Roll 3d6, 1d4, Cut 1, Cut 2': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=2),
-                        Roll(num_dice=1, dice_size=4, cut=2),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=2, threshold=0)),
+                        Roll(num_dice=1, dice_size=4, cut=Cut(num=2, threshold=0)),
                     ],
                     None
                 ),
@@ -204,38 +206,38 @@ class TestRoll(unittest.TestCase):
             'Cut and Drop': {
                 'Roll 3d6 Cut 1 Drop 2': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=1, drop=2),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=1, threshold=0), drop=2),
                     ],
                     None
                 ),
 
                 'Roll 3d6, 1d4, Cut 1, Drop 1': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=1, drop=1),
-                        Roll(num_dice=1, dice_size=4, cut=1, drop=1),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=1, threshold=0), drop=1),
+                        Roll(num_dice=1, dice_size=4, cut=Cut(num=1, threshold=0), drop=1),
                     ],
                     None
                 ),
 
                 'Roll 3d6, 1d4, Cut 2, Drop 1': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=2, drop=1),
-                        Roll(num_dice=1, dice_size=4, cut=2, drop=1),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=2, threshold=0), drop=1),
+                        Roll(num_dice=1, dice_size=4, cut=Cut(num=2, threshold=0), drop=1),
                     ],
                     None
                 ),
 
                 'Roll 3d6, 1d4, Drop 2, Cut 1': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=1, drop=2),
-                        Roll(num_dice=1, dice_size=4, cut=1, drop=2),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=1, threshold=0), drop=2),
+                        Roll(num_dice=1, dice_size=4, cut=Cut(num=1, threshold=0), drop=2),
                     ],
                     None
                 ),
 
                 'Roll 3d6 cut 5': (
                     [
-                        Roll(num_dice=3, dice_size=6, cut=5),
+                        Roll(num_dice=3, dice_size=6, cut=Cut(num=5, threshold=0)),
                     ],
                     None
                 ),
@@ -260,27 +262,27 @@ class TestRoll(unittest.TestCase):
 
                 'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1 # This is a roll to pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
-                        Roll(num_dice=4, dice_size=10, cut=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=4, dice_size=10, cut=Cut(num=1, threshold=0)),
                     ],
                     "This is a roll to pick a lock"
                 ),
 
                 'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1# This is a roll to pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
-                        Roll(num_dice=4, dice_size=10, cut=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=4, dice_size=10, cut=Cut(num=1, threshold=0)),
                     ],
                     "This is a roll to pick a lock"
                 ),
 
                 'Roll 3d6 + 1, 1d4-2, 4d10 Cut 1# This is a roll to # pick a lock': (
                     [
-                        Roll(num_dice=3, dice_size=6, bonus=1, cut=1),
-                        Roll(num_dice=1, dice_size=4, penalty=2, cut=1),
-                        Roll(num_dice=4, dice_size=10, cut=1),
+                        Roll(num_dice=3, dice_size=6, bonus=1, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=1, dice_size=4, penalty=2, cut=Cut(num=1, threshold=0)),
+                        Roll(num_dice=4, dice_size=10, cut=Cut(num=1, threshold=0)),
                     ],
                     "This is a roll to # pick a lock"
                 ),
@@ -333,6 +335,7 @@ class TestRoll(unittest.TestCase):
             'identity': lambda s: s,
             'lower': lambda s: s.lower() if s is not None else None,
             'upper': lambda s: s.upper() if s is not None else None,
+            '# to ?': lambda s: s.replace('#', '?') if s is not None else None,
 
             'prepend_space': lambda s: ' ' + s if s is not None else None,
             'append_space': lambda s: s + ' ' if s is not None else None,
@@ -366,7 +369,7 @@ class TestRoll(unittest.TestCase):
             for roll_str in group_cases:
                 for transformer, transformation in invalid_transformers.items():
                     if isinstance(roll_str, tuple):
-                        if transformer in ['identity', 'lower', 'upper', 'prepend_space', 'append_space']:
+                        if transformer in ['identity', 'lower', 'upper', 'prepend_space', 'append_space', '# to ?']:
                             roll_str_to_use, expected_exception_cls = roll_str
                         else:
                             roll_str_to_use, expected_exception_cls = roll_str[0], NotARollError
@@ -386,6 +389,140 @@ class TestRoll(unittest.TestCase):
                             Roll.parse_roll,
                             transformed
                         )
+
+    @unittest.mock.patch('src.Roll.random.randint')
+    def test_roll(self, mock_randint: unittest.mock.Mock) -> None: # TODO Test bonuses and penalties too
+        base_rolls = {
+            'Basic 1d6': {
+                'input': Roll(num_dice=1, dice_size=6, drop=0, cut=Cut(num=0)),
+                'random': [3],
+                'expected': {
+                    'results': [3],
+                    'indices_to_remove': [],
+                    'kept_results': [3]
+                }
+            },
+            'Basic 1d10': {
+                'input': Roll(num_dice=1, dice_size=10, drop=0, cut=Cut(num=0)),
+                'random': [7],
+                'expected': {
+                    'results': [7],
+                    'indices_to_remove': [],
+                    'kept_results': [7]
+                }
+            },
+            'Basic 2d10': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=0)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [],
+                    'kept_results': [7, 3]
+                }
+            },
+
+            '2d10 Drop 1': {
+                'input': Roll(num_dice=2, dice_size=10, drop=1, cut=Cut(num=0)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7],
+                    'indices_to_remove': [],
+                    'kept_results': [7]
+                }
+            },
+            '2d10 Cut 1': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=1)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [0],
+                    'kept_results': [3]
+                }
+            },
+
+            '2d10 Cut 1 above 2': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=1, threshold=2)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [0],
+                    'kept_results': [3]
+                }
+            },
+            '2d10 Cut 2 above 4, one result below threshold': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=2, threshold=4)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [0],
+                    'kept_results': [3]
+                }
+            },
+            '2d10 Cut 2 above 4, both results below threshold': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=1, threshold=8)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [],
+                    'kept_results': [7, 3]
+                }
+            },
+            '2d10 Cut 3, more cut than dice': {
+                'input': Roll(num_dice=2, dice_size=10, drop=0, cut=Cut(num=3, threshold=0)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7, 3],
+                    'indices_to_remove': [0, 1],
+                    'kept_results': []
+                }
+            },
+
+            '2d10 Drop 1 Cut 1': {
+                'input': Roll(num_dice=2, dice_size=10, drop=1, cut=Cut(num=1, threshold=0)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [7],
+                    'indices_to_remove': [0],
+                    'kept_results': []
+                }
+            },
+
+            '2d10 Drop 2 Cut 1, no dice to cut': {
+                'input': Roll(num_dice=2, dice_size=10, drop=2, cut=Cut(num=1, threshold=0)),
+                'random': [7, 3],
+                'expected': {
+                    'results': [],
+                    'indices_to_remove': [],
+                    'kept_results': []
+                }
+            }
+        }
+
+        for label, roll_data in base_rolls.items():
+            roll = roll_data['input']
+
+            with self.subTest(label):
+                mock_randint.side_effect = roll_data['random']
+
+                results, indices_to_remove, kept_results = roll.roll(cut_highest_first=True) # TODO Test variations
+
+                with self.subTest('Results'):
+                    self.assertEqual(
+                        results,
+                        roll_data['expected']['results']
+                    )
+
+                with self.subTest('Indices to Remove'):
+                    self.assertEqual(
+                        indices_to_remove,
+                        roll_data['expected']['indices_to_remove']
+                    )
+
+                with self.subTest('Kept Results'):
+                    self.assertEqual(
+                        kept_results,
+                        roll_data['expected']['kept_results']
+                    )
 
     def setUp(self) -> None:
         logging.disable(logging.ERROR)

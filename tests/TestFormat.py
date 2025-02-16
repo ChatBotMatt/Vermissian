@@ -2,7 +2,7 @@ import string
 import unittest
 import logging
 
-from src.utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler, no_embed
+from src.utils.format import strikethrough, bold, underline, code, multiline_code, italics, quote, bullet, spoiler, no_embed, second_bold
 
 class TestFormat(unittest.TestCase):
 
@@ -13,6 +13,16 @@ class TestFormat(unittest.TestCase):
             with self.subTest(text):
                 self.assertEqual(
                     strikethrough(text),
+                    expected
+                )
+
+    def test_second_bold(self):
+        for text in self.texts:
+            expected = f'**{text}**'
+
+            with self.subTest(text):
+                self.assertEqual(
+                    second_bold(text),
                     expected
                 )
 

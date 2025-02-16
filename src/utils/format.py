@@ -29,3 +29,6 @@ def spoiler(value: Union[int, str]) -> str:
 
 def no_embed(value: Union[int, str]) -> str:
     return f'<{value}>'
+
+def second_bold(text: Union[int, str]) -> str:
+    return f'**{text}**'

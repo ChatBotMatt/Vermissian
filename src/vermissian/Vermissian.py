@@ -1,14 +1,13 @@
-import discord
-
 from typing import Dict, Union
 
-from src.Game import SpireGame, HeartGame
+from src.Bot import Bot
+from src.vermissian.ResistanceGame import SpireGame, HeartGame
 from src.System import System
 from src.utils.google_sheets import get_spreadsheet_id
 from src.utils.exceptions import BadCharacterKeeperError, UnknownSystemError
 from src.utils.logger import get_logger
 
-class Vermissian(discord.Bot):
+class Vermissian(Bot):
 
     def __init__(self, *args, **options):
         super().__init__(*args, **options)
@@ -40,15 +39,3 @@ class Vermissian(discord.Bot):
         self.add_game(game=new_game)
 
         return new_game
-
-    def add_game(self, game: Union[SpireGame, HeartGame]):
-        self.games[game.guild_id] = game
-        game.save()
-
-    def remove_game(self, guild_id: int):
-        if guild_id in self.games:
-            game = self.games[guild_id]
-            game.remove()
-            del self.games[guild_id]
-        else:
-            self.logger.warning(f'Asked to remove game with guild ID {guild_id}, but no game by that ID exists.')

@@ -1,14 +1,33 @@
 import re
-from typing import List, Tuple, Optional
+import random
+from dataclasses import dataclass
+from typing import List, Tuple, Union, Optional
 
-from src.utils.exceptions import NotARollError, NoSidesError, NoDiceError, WrongDifficultyError
+from src.utils.exceptions import NotARollError, NoSidesError, NoDiceError
+
+@dataclass
+class Cut:
+    num: int
+    threshold: int = 0
+
+    def __str__(self):
+        if self.threshold > 0:
+            return f'Cut the {self.num} highest'
+        else:
+            return f'Cut {self.num} rolls >= {self.threshold}'
+
+    def __repr__(self):
+        return str(self)
 
 class Roll:
     """
     Represents a roll to make.
     """
 
-    def __init__(self, num_dice: int, dice_size: int, cut: int = 0, drop: int = 0, bonus: int = 0, penalty: int = 0):
+    def __init__(self, num_dice: int, dice_size: int, cut: Optional[Cut] = None, drop: int = 0, bonus: int = 0, penalty: int = 0):
+        if cut is None:
+            cut = Cut(num=0)
+
         self.num_dice = num_dice
         self.dice_size = dice_size
         self.cut = cut
@@ -33,10 +52,13 @@ class Roll:
         if self.drop > 0:
             s += f' Drop {self.drop}'
 
-        if self.cut > 0:
-            s += f' Cut {self.cut}'
+        if self.cut.num > 0:
+            s += f' {self.cut}'
 
         return s
+
+    def __repr__(self):
+        return str(self)
 
     def __eq__(self, other: 'Roll') -> bool:
         return self.__dict__ == other.__dict__
@@ -76,8 +98,14 @@ class Roll:
             note = roll_str[note_index+1: ].strip()
             note_parsed_roll_str = roll_str[: note_index]
         except ValueError:
-            note = None
-            note_parsed_roll_str = roll_str
+            try:
+                note_index = roll_str.index('?')
+
+                note = roll_str[note_index + 1:].strip()
+                note_parsed_roll_str = roll_str[: note_index]
+            except ValueError:
+                note = None
+                note_parsed_roll_str = roll_str
 
         note_parsed_roll_str = note_parsed_roll_str.strip().lower()
 
@@ -116,7 +144,7 @@ class Roll:
 
         tokens = [token.strip().lower() for token in trimmed_roll_str.split(',')]
 
-        cut = 0
+        cut_num = 0
         drop = 0
         for token in tokens:
             cut_match = re.fullmatch(
@@ -199,10 +227,48 @@ class Roll:
                 else:
                     drop = drop_match.group(1)
             else:
-                cut = cut_match.group(1)
+                cut_num = cut_match.group(1)
 
         for roll in rolls:
-            roll.cut = int(cut)
+            roll.cut = Cut(num=int(cut_num), threshold=0)
             roll.drop = int(drop)
 
         return rolls, note
+
+    def roll(self, cut_highest_first: bool) -> Tuple[List[int], List[int], List[int]]:
+        results = []
+        indices_to_remove = []
+        kept_results = []
+
+        if (self.num_dice - self.drop) > 0:
+            for i in range(self.num_dice - self.drop):
+                result = random.randint(1, self.dice_size)
+
+                results.append(result)
+
+            indices_to_remove, kept_results = Roll.cut_rolls(results, self.cut, cut_highest_first)
+
+        return results, indices_to_remove, kept_results
+
+    @classmethod
+    def cut_rolls(cls, raw_results: List[int], cut: Optional[Cut], highest_first: bool):
+        if cut is None or cut.num == 0:
+            return [], raw_results
+
+        indices_to_remove = []
+        sorted_indexed_results = sorted(enumerate(raw_results), key=lambda r: r[1], reverse=highest_first)
+
+        still_to_cut = cut.num
+        for index, result in sorted_indexed_results:
+            if result >= cut.threshold:
+                indices_to_remove.append(index)
+                still_to_cut -= 1
+            else:
+                break  # Sorted so if we hit one we can't cut, we can stop early
+
+            if still_to_cut == 0:
+                break
+
+        kept_results = [value for index, value in enumerate(raw_results) if index not in indices_to_remove]
+
+        return indices_to_remove, kept_results

@@ -1,5 +1,5 @@
 servers
-credentials.json
+credentials*.json
 *.csv
 *.json
 client_secret_*

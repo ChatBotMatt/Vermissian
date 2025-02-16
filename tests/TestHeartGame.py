@@ -7,9 +7,9 @@ import os
 import requests
 from typing import List, Tuple
 
-from src.Game import HeartGame, HeartSkill, HeartDomain
-from src.Roll import Roll
-from src.CharacterSheet import HeartCharacter
+from src.vermissian.ResistanceCharacterSheet import HeartCharacter, HeartSkill, HeartDomain
+from src.vermissian.ResistanceGame import HeartGame
+from src.Roll import Roll, Cut
 from src.utils.format import strikethrough, bold
 
 class TestHeartGame(unittest.TestCase):
@@ -161,7 +161,7 @@ class TestHeartGame(unittest.TestCase):
                         expected_new_difficulty
                     )
 
-    @unittest.mock.patch('src.Game.HeartGame.compute_downgrade_difficulty')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.HeartGame.compute_downgrade_difficulty')
     def test_roll(self, mock_downgrade_difficulty: unittest.mock.Mock):
         for num_dice in range(1, 5):
             for difficulty in range(0, 3):
@@ -170,7 +170,7 @@ class TestHeartGame(unittest.TestCase):
                         roll = Roll(
                             num_dice=num_dice,
                             dice_size=10,
-                            cut=difficulty,
+                            cut=Cut(num=difficulty, threshold=0),
                             bonus=bonus,
                             penalty=penalty
                         )
@@ -183,7 +183,7 @@ class TestHeartGame(unittest.TestCase):
                         effective_highest, formatted_results, use_difficult_actions_table, total = HeartGame.roll(roll)
 
                         with self.subTest(f'Uses downgrade difficulty - {roll}'):
-                            mock_downgrade_difficulty.assert_called_with(roll.num_dice, roll.cut)
+                            mock_downgrade_difficulty.assert_called_with(roll.num_dice, roll.cut.num)
 
                         with self.subTest(f'Difficult Actions Table correctly provided - {roll}'):
                             self.assertEqual(
@@ -210,8 +210,8 @@ class TestHeartGame(unittest.TestCase):
                                 0 + bonus - penalty
                             )
 
-    @unittest.mock.patch('src.Game.HeartGame.get_result')
-    @unittest.mock.patch('src.Game.HeartGame.get_character')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.HeartGame.get_result')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.HeartGame.get_character')
     def test_roll_check(self, mock_get_character: unittest.mock.Mock, mock_get_result: unittest.mock.Mock):
         mock_get_character.return_value = unittest.mock.Mock(self.heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
@@ -220,7 +220,7 @@ class TestHeartGame(unittest.TestCase):
                 roll = Roll(
                     num_dice=num_dice,
                     dice_size=10,
-                    cut=difficulty
+                    cut=Cut(num=difficulty, threshold=0)
                 )
 
                 for skill in HeartSkill:
@@ -257,8 +257,8 @@ class TestHeartGame(unittest.TestCase):
                                         use_difficult_actions_table
                                     )
 
-    @unittest.mock.patch('Game.random.randint')
-    @unittest.mock.patch('src.Game.HeartGame.get_character')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.random.randint')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.HeartGame.get_character')
     def test_roll_fallout(self, mock_get_character: unittest.mock.Mock, mock_randint: unittest.mock.Mock):
         mock_get_character.return_value = unittest.mock.Mock(self.heart_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
@@ -343,7 +343,7 @@ class TestHeartGame(unittest.TestCase):
                     expected_outcome,
                 )
 
-    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.HeartCharacter.initialise')
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
     def test_create_character(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_initialise: unittest.mock.Mock):
         mock_get_spreadsheet_metadata.return_value = {

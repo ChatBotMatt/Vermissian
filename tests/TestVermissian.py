@@ -1,6 +1,3 @@
-import discord
-
-import unittest
 import unittest.mock
 
 import logging
@@ -8,10 +5,10 @@ import os
 import shutil
 from typing import Dict, Any, Union
 
-from src.Game import SpireGame, HeartGame
-from src.CharacterSheet import SpireCharacter, HeartCharacter
+from src.vermissian.ResistanceGame import SpireGame, HeartGame
+from src.vermissian.ResistanceCharacterSheet import SpireCharacter, HeartCharacter
 from src.System import System
-from src.Vermissian import Vermissian
+from vermissian.Vermissian import Vermissian
 from src.utils.exceptions import BadCharacterKeeperError
 
 class TestVermissian(unittest.TestCase):
@@ -181,8 +178,9 @@ class TestVermissian(unittest.TestCase):
             )
 
     @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.get_from_spreadsheet_api')
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
-    def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_get_from_spreadsheet_api: unittest.mock.Mock) -> None:
+    def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_resistance_get_from_spreadsheet_api: unittest.mock.Mock, mock_get_from_spreadsheet_api: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
 
         mock_get_spreadsheet_metadata.return_value = {

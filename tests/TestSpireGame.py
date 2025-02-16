@@ -8,8 +8,8 @@ import shutil
 import os
 from typing import List, Tuple
 
-from src.Game import SpireGame
-from src.CharacterSheet import SpireCharacter, SpireSkill, SpireDomain
+from src.vermissian.ResistanceGame import SpireGame
+from src.vermissian.ResistanceCharacterSheet import SpireCharacter, SpireSkill, SpireDomain
 from src.Roll import Roll
 from src.utils.format import strikethrough, bold
 
@@ -209,6 +209,7 @@ class TestSpireGame(unittest.TestCase):
                     character_data['sheet_name']
                 )
 
+                print(type(loaded_character))
                 self.assertTrue(isinstance(loaded_character, SpireCharacter))
 
         for label, invalid_data in self.ALL_INVALID_DATA.items():
@@ -219,8 +220,8 @@ class TestSpireGame(unittest.TestCase):
                     invalid_data
                 )
 
-    @unittest.mock.patch('src.Game.SpireGame.get_result')
-    @unittest.mock.patch('src.Game.SpireGame.get_character')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.SpireGame.get_result')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.SpireGame.get_character')
     def test_roll_check(self, mock_get_character: unittest.mock.Mock, mock_get_result: unittest.mock.Mock):
         mock_get_character.return_value = unittest.mock.Mock(self.spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
@@ -355,8 +356,8 @@ class TestSpireGame(unittest.TestCase):
                             expected_outcome,
                         )
 
-    @unittest.mock.patch('src.Game.random.randint')
-    @unittest.mock.patch('src.Game.SpireGame.get_character')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.random.randint')
+    @unittest.mock.patch('src.vermissian.ResistanceGame.SpireGame.get_character')
     def test_roll_fallout(self, mock_get_character: unittest.mock.Mock, mock_randint: unittest.mock.Mock):
         mock_get_character.return_value = unittest.mock.Mock(self.spire_game.character_sheets[self.DISCORD_USERNAME], autospec=True)
 
@@ -413,7 +414,7 @@ class TestSpireGame(unittest.TestCase):
                                 mock_randint.return_value
                             )
 
-    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.SpireCharacter.initialise')
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
     def test_create_character(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_initialise: unittest.mock.Mock):
         mock_get_spreadsheet_metadata.return_value = {

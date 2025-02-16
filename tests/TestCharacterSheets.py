@@ -9,7 +9,7 @@ from typing import Dict
 
 import requests
 
-from src.CharacterSheet import CharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
+from src.vermissian.ResistanceCharacterSheet import ResistanceCharacterSheet, SpireCharacter, SpireSkill, SpireDomain, HeartCharacter, HeartSkill, HeartDomain
 
 @dataclasses.dataclass
 class MockResponse:
@@ -24,7 +24,7 @@ class MockResponse:
         return self.content
 
 class TestCharacterSheet(abc.ABC):
-    character_sheet_cls = CharacterSheet
+    character_sheet_cls = ResistanceCharacterSheet
 
     example_sheet_name = 'abc'
 
@@ -83,7 +83,7 @@ class TestCharacterSheet(abc.ABC):
             with self.subTest('Mock used'):
                 self.assertTrue(mock_get.called)
 
-    @unittest.mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_check_skill_and_domain(self, mock_get: mock.Mock):
         for expected_has_skill, expected_has_domain in itertools.product([False, True], [False, True]):
             for skill, domain in itertools.product(self.skills, self.domains):
@@ -204,7 +204,7 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
 
     character_sheet_cls = SpireCharacter
 
-    @mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
         stresses = [5, 2, 3, 4, 7]
 
@@ -247,7 +247,7 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
                     'Bad Resistance'
                 )
 
-    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.SpireCharacter.initialise')
     def test_load(self, mock_initialise: unittest.mock.Mock):
         valid_info_including_name = {
             'discord_username': self.valid_unnamed_character.discord_username,
@@ -306,7 +306,7 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
                 self.valid_named_character
             )
 
-    @unittest.mock.patch('src.CharacterSheet.SpireCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.SpireCharacter.initialise')
     def setUp(self, mock_initialise: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
 
@@ -336,7 +336,7 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
 
     character_sheet_cls = HeartCharacter
 
-    @mock.patch('src.CharacterSheet.get_from_spreadsheet_api', autospec=True)
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.get_from_spreadsheet_api', autospec=True)
     def test_get_fallout_stress(self, mock_get: unittest.mock.Mock):
         expected_stress = 4
 
@@ -364,7 +364,7 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
                 expected_stress
             )
 
-    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.HeartCharacter.initialise')
     def test_load(self, mock_initialise: unittest.mock.Mock):
         valid_info_including_name = {
             'discord_username': self.valid_unnamed_character.discord_username,
@@ -423,7 +423,7 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
                 self.valid_named_character
             )
 
-    @unittest.mock.patch('src.CharacterSheet.HeartCharacter.initialise')
+    @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.HeartCharacter.initialise')
     def setUp(self, mock_initialise: unittest.mock.Mock) -> None:
         logging.disable(logging.ERROR)
 

@@ -80,7 +80,7 @@ def main():
 
         abilities[System.HEART.value][ability.name.lower()] = ability
 
-    with open('all_abilities.json', 'w', encoding='utf-8') as f:
+    with open('all_abilities_vermissian.json', 'w', encoding='utf-8') as f:
         json.dump(abilities, f, indent=4, default=lambda j: j.json())
 
 if __name__ == '__main__':

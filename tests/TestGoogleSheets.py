@@ -1,3 +1,4 @@
+import string
 import unittest
 from unittest import mock
 
@@ -7,7 +8,10 @@ from typing import Dict
 import requests
 import logging
 
-from src.utils.google_sheets import get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response, get_key, get_sheet_name_from_gid
+from src.utils.google_sheets import (
+    get_spreadsheet_id, get_spreadsheet_sheet_gid, get_spreadsheet_metadata, get_from_spreadsheet_api, check_response,
+    get_key, get_sheet_name_from_gid, _compute_num_new_columns, offset_reference
+)
 from src.utils.exceptions import ForbiddenSpreadsheetError, TooManyRequestsError
 
 @dataclasses.dataclass
@@ -564,6 +568,119 @@ class TestGoogleSheets(unittest.TestCase):
                     original_key,
                     second_key
                 )
+
+    def test_compute_new_columns(self) -> None:
+
+        # Z1 -> AA1 -> [...] AZ1 -> BA1 -> [...] BZ1 -> CA1
+
+        valid_references = {
+            1: {
+                1: 0,
+                5: 0,
+                len(string.ascii_uppercase): 1,
+                2*len(string.ascii_uppercase): 2,
+                len(string.ascii_uppercase) + 1: 1,
+            },
+            len(string.ascii_uppercase)-1: {
+                1: 1,
+                5: 1,
+                len(string.ascii_uppercase): 1,
+                2 * len(string.ascii_uppercase): 2,
+                len(string.ascii_uppercase) + 1: 2,
+            }
+
+        }
+
+        invalid_references = {} # TODO
+
+        for initial_column, column_offset_data in valid_references.items():
+            for column_offset, expected in column_offset_data.items():
+                with self.subTest(f'Valid {initial_column}, {column_offset}'):
+                    new_reference = _compute_num_new_columns(initial_column, column_offset)
+
+                    self.assertEqual(new_reference, expected)
+
+        for initial_reference, offset_data in invalid_references.items():
+            for column_offset, row_offset in offset_data:
+                with self.subTest(f'Invalid {initial_reference}, ({column_offset}, {row_offset})'):
+                    self.assertRaises(
+                        ValueError,
+                        offset_reference,
+                        reference=initial_reference,
+                        column_offset=column_offset,
+                        row_offset=row_offset
+                    )
+
+    # @unittest.skip('Temp')
+    def test_offset_reference(self) -> None:
+
+        # Z1 -> AA1 -> [...] AZ1 -> BA1 -> [...] BZ1 -> CA1
+
+        valid_references = {
+            'A1': {
+                (0, 1): 'A2',
+                (0, 5): 'A6',
+                (1, 0): 'B1',
+                (1, 1): 'B2',
+                (3, 7): 'D8',
+                (len(string.ascii_uppercase), 0): 'AA1'
+            },
+            'B3': {
+                (0, 1): 'B4',
+                (0, -1): 'B2',
+                (0, 5): 'B8',
+                (0, -2): 'B1',
+                (1, 0): 'C3',
+                (1, 1): 'C4',
+                (3, 7): 'E10',
+                (len(string.ascii_uppercase), 0): 'AB3'
+            },
+            'Z1': {
+                (1, 0): 'AA1' # TODO More
+            },
+            'AA1': {
+                (1, 0): 'AB1',
+                (0, 1): 'AA2',
+                (1, 1): 'AB2'
+            }
+        }
+
+        invalid_references = {
+            'A1': [
+                (0, -1),
+                (-1, 0),
+                (-5, 0),
+                (5, -3),
+                (-3, -2)
+            ],
+            'B3': [
+                (-2, 1),
+                (0, -3),
+                (-6, 5),
+            ]
+        }
+
+        for initial_reference, offset_data in valid_references.items():
+            for (column_offset, row_offset), expected in offset_data.items():
+                with self.subTest(f'Valid {initial_reference}, ({column_offset}, {row_offset})'):
+                    new_reference = offset_reference(initial_reference, column_offset=column_offset, row_offset=row_offset)
+
+                    self.assertEqual(new_reference, expected)
+
+                with self.subTest(f'Valid identity operation on {initial_reference}'):
+                    new_identity_reference = offset_reference(initial_reference, column_offset=0, row_offset=0)
+                    self.assertEqual(new_identity_reference, initial_reference)
+
+        for initial_reference, offset_data in invalid_references.items():
+            for column_offset, row_offset in offset_data:
+                with self.subTest(f'Invalid {initial_reference}, ({column_offset}, {row_offset})'):
+                    self.assertRaises(
+                        ValueError,
+                        offset_reference,
+                        reference=initial_reference,
+                        column_offset=column_offset,
+                        row_offset=row_offset
+                    )
 
     def setUp(self) -> None:
         if hasattr(get_key, 'key'):

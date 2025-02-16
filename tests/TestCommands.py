@@ -1,25 +1,71 @@
 import discord
 
-import unittest
 import unittest.mock
-
 import logging
-import os
-import shutil
-from typing import Dict, Any, Union
 
-from src.Game import SpireGame, HeartGame
-from src.CharacterSheet import SpireCharacter, HeartCharacter
 from src.System import System
-from src.Vermissian import Vermissian
-from src.commands import get_credits, get_ability, get_tag, get_about, get_legal, get_donate, get_delve_draw, \
-    get_commands_page_content, get_debugging_page_content, get_getting_started_page_content, \
-    get_full_card_name, get_privacy_policy, get_character_list, log_suggestion, format_ability, pick_delve_draw_card, \
-    spire_fallout, roll_spire_action, roll_heart_action, simple_roll, heart_fallout, link, unlink, help_roll
-from src.utils.exceptions import BadCharacterKeeperError
+from vermissian.Vermissian import Vermissian
+from src.commands import get_donate, get_privacy_policy, should_respond, BOT_USER_IDS
+from vermissian.commands import get_credits, get_ability, get_about, get_legal, get_debugging_page_content, \
+    get_getting_started_page_content, format_ability
 from extract_abilities import Ability
 
 class TestCommands(unittest.TestCase):
+
+    def test_should_respond(self):
+        vermissian_mock_member = unittest.mock.MagicMock(discord.Member)
+        vermissian_mock_member.id = BOT_USER_IDS['Vermissian']
+
+        ghost_detector_mock_member = unittest.mock.MagicMock(discord.Member)
+        ghost_detector_mock_member.id = BOT_USER_IDS['Ghost Detector']
+
+        other_mock_member = unittest.mock.MagicMock(discord.Member)
+        other_mock_member.id = 50
+
+        with self.subTest('Vermissian is prioritised over Ghost Detector'):
+            vermissian_should = should_respond(
+                'Vermissian',
+                [
+                    vermissian_mock_member,
+                    ghost_detector_mock_member,
+                    other_mock_member
+                ]
+            )
+
+            self.assertTrue(vermissian_should)
+
+            ghost_detector_should = should_respond(
+                'Ghost Detector',
+                [
+                    vermissian_mock_member,
+                    ghost_detector_mock_member,
+                    other_mock_member
+                ]
+            )
+
+            self.assertFalse(ghost_detector_should)
+
+        with self.subTest('Vermissian doesn\'t talk if not in the channel'):
+            vermissian_should = should_respond(
+                'Vermissian',
+                [
+                    ghost_detector_mock_member,
+                    other_mock_member
+                ]
+            )
+
+            self.assertFalse(vermissian_should)
+
+        with self.subTest('Ghost Detector can talk if Vermissian isn\'t there'):
+            ghost_detector_should = should_respond(
+                'Ghost Detector',
+                [
+                    ghost_detector_mock_member,
+                    other_mock_member
+                ]
+            )
+
+            self.assertTrue(ghost_detector_should)
 
     def test_message_limits(self):
         """
@@ -51,6 +97,7 @@ class TestCommands(unittest.TestCase):
     def test_get_ability(self):
 
         # TODO Don't love this, but unit testing lazy loads is a pain.
+        # TODO Can I mock the attribute?
         get_ability('Arbitrary', None) # Make it lazy-load the abilities.
 
         with self.subTest('Has abilities attribute'):
