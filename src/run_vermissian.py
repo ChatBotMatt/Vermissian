@@ -28,7 +28,7 @@ from src.vermissian.ResistanceCharacterSheet import SpireCharacter, SpireSkill, 
 from src.commands import get_privacy_policy, get_donate, get_commands_page_content, get_character_list, help_roll, should_respond
 from src.vermissian.commands import get_credits, get_legal, get_about, get_getting_started_page_content, \
     get_debugging_page_content, get_tag, get_ability, get_delve_draw, link, unlink, spire_fallout, roll_spire_action, \
-    heart_fallout, roll_heart_action, add_character, log_suggestion, simple_roll, get_changelog
+    heart_fallout, roll_heart_action, add_character, log_suggestion, simple_roll, get_changelog, roll_circulation, NEWSPAPERS
 from src.goblin.commands import roll as goblin_roll # TODO
 
 intents = discord.Intents.default()
@@ -48,6 +48,8 @@ heart_skills = [skill.value for skill in HeartSkill]
 heart_domains = [domain.value for domain in HeartDomain]
 
 heart_difficulties = list(HeartGame.DIFFICULTIES.keys())
+
+newspapers = list(NEWSPAPERS.keys())
 
 def error_responder_decorator(command: Callable):
     @functools.wraps(command)
@@ -359,6 +361,29 @@ async def heart_fallout_command(
     )
 
     await ctx.respond(response)
+
+
+@vermissian.slash_command(name='circulation', description='Rolls dice for newspaper circulation in the Sulphurous Presses scenario')
+@command_logging_decorator
+@error_responder_decorator
+async def roll_circulation_command(
+    ctx: discord.ApplicationContext,
+    fits_domain: discord.Option(bool, 'Does this fit the target domain?', required=True),
+    fits_stance: discord.Option(bool, 'Does this match your editorial stance?', required=True),
+    in_local_area: discord.Option(bool, 'Is this story taking place in the paper\'s local area?', required=True),
+    target_paper: discord.Option(str, description='The newspaper you\'re competing with. Determines initial difficulty and stress they inflict.', choices=newspapers),
+    additional_difficulty: discord.Option(int, "Any difficulty stemming from fallout or other factors", default=0, min_value=0)
+):
+    response, view = roll_circulation(
+        fits_domain=fits_domain,
+        fits_stance=fits_stance,
+        within_local_area=in_local_area,
+        target=target_paper,
+        additional_difficulty=additional_difficulty
+    )
+
+    await ctx.respond(response, view=view)
+
 
 @vermissian.slash_command(name='roll', description='Rolls dice, using the same syntax as the non-command rolling')
 @command_logging_decorator
