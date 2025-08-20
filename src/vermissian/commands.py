@@ -18,6 +18,51 @@ from extract_abilities import Ability
 
 # TODO Add Hammertime stuff? There's no API or calendar input, so tricky.
 
+NEWSPAPERS = {
+    name.lower(): data for name, data in {
+    "Liberate!": {
+        "difficulty": 0,
+        "stress": 3
+    },
+    "The Orb": {
+        "difficulty": 0,
+        "stress": 3
+    },
+    "Q": {
+        "difficulty": 0,
+        "stress": 3
+    },
+    "The Furnace": {
+        "difficulty": 1,
+        "stress": 6
+    },
+    "Ambrosia": {
+        "difficulty": 1,
+        "stress": 6
+    },
+    "The Tassel": {
+        "difficulty": 1,
+        "stress": 6
+    },
+    "The Silhouette": {
+        "difficulty": 2,
+        "stress": 8
+    },
+    "The Chronicle": {
+        "difficulty": 2,
+        "stress": 8
+    },
+    "The Torch": {
+        "difficulty": 2,
+        "stress": 10
+    },
+    "The Spiral Muse": {
+        "difficulty": 1,
+        "stress": 10
+    }
+}.items()
+}
+
 class StressRollerView(discord.ui.View):
     """
     A view which allows the user to pick via buttons how much stress to roll.
@@ -30,7 +75,7 @@ class StressRollerView(discord.ui.View):
             raise ValueError(f'Invalid stress size passed in "{stress_sizes}", must be at least 1.')
 
         for stress_size in stress_sizes:
-            button =discord.ui.Button(label=f'Roll d{stress_size} stress', style=discord.ButtonStyle.primary)
+            button = discord.ui.Button(label=f'Roll d{stress_size} stress', style=discord.ButtonStyle.primary)
             button.callback = functools.partial(StressRollerView.roll_stress, stress_size=stress_size)
 
             self.add_item(button)
@@ -1059,6 +1104,81 @@ def roll_heart_action(game: HeartGame, username: str, skill: str, domain: str, m
     response = response[:2000]
 
     return response, view
+
+def roll_circulation(
+    fits_domain: bool,
+    fits_stance: bool,
+    within_local_area: bool,
+    target: str,
+    additional_difficulty: int = 0
+):
+    if target.lower() not in NEWSPAPERS:
+        raise ValueError(f'Unknown newspaper: "{target}"')
+
+    target_paper = NEWSPAPERS[target.lower()]
+
+    num_dice = 1
+    dice_size = 10
+
+    if fits_domain:
+        num_dice += 1
+        domain_text = 'in the target domain'
+    else:
+        domain_text = ''
+
+    if fits_stance:
+        num_dice += 1
+        stance_text = 'with the editorial stance'
+    else:
+        stance_text = ''
+
+    if within_local_area:
+        num_dice += 1
+        local_area_text = 'taking place locally'
+    else:
+        local_area_text = ''
+
+    difficulty = target_paper['difficulty'] + additional_difficulty
+
+    roll = Roll(num_dice=num_dice, dice_size=dice_size, drop=difficulty)
+
+    downgrade_expression = ''
+
+    effective_highest, formatted_results, downgrade, total = SpireGame.roll(roll)
+
+    outcome = SpireGame.get_result(effective_highest, downgrade)
+
+    if downgrade > 0:
+        downgrade_expression = 'which was downgraded '
+
+    modifier_expression = ', '.join([text for text in [domain_text, stance_text, local_area_text] if text != '']).strip()
+
+    response = f'''You rolled {num_dice}d{dice_size} ({modifier_expression}) {"" if difficulty == 0 else f" with a difficulty of {difficulty}"} {downgrade_expression}for a "**{outcome}**": {{{", ".join(formatted_results)}}}'''
+
+    inflict_stress_text = 'Inflict stress: Initially d3, d6 after defeating your first Difficulty 1 rival, d8 after defeating your first Difficulty 2 rival.'
+    take_stress_text = f'Take d{target_paper["stress"]} stress\nThe Editor should check for Bond Fallout and additionally inflict 2 Reputation stress on each PC if it happens.'
+
+    if outcome == SpireGame.SUCCESS_AT_A_COST:
+        stress_text = f'{inflict_stress_text}\n\n{take_stress_text}'
+        stresses = sorted({3, 6, 8, target_paper['stress']})
+    elif outcome in [SpireGame.SUCCESS, SpireGame.CRIT_SUCCESS]:
+        stress_text = inflict_stress_text
+        stresses = [3, 6, 8]
+    else:
+        stress_text = take_stress_text
+        stresses = [target_paper['stress']]
+
+    response += f'\n\n{stress_text}'
+
+    view = StressRollerView(stress_sizes=stresses)
+
+    if len(response) > 2000:
+        response = 'Very long roll, some of it will be cut off.\n\n' + response
+
+    response = response[:2000]
+
+    return response, view
+
 
 def spire_fallout(game: SpireGame, username: str, resistance: Literal['Blood', 'Mind', 'Silver', 'Shadow', 'Reputation']):
     if not isinstance(game, SpireGame):
