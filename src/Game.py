@@ -8,6 +8,7 @@ from src.System import System
 from src.vermissian.ResistanceCharacterSheet import HeartCharacter, SpireCharacter
 from src.overcharge.DieCharacter import DieCharacter
 from src.astir.AstirCharacterSheet import AstirCharacter
+from src.bloodheist.BloodheistCharacterSheet import BloodheistCharacterSheet
 from src.CharacterSheet import CharacterSheet
 from src.utils.google_sheets import get_spreadsheet_metadata, get_spreadsheet_sheet_gid, get_sheet_name_from_gid, get_spreadsheet_id
 from src.utils.logger import get_logger
@@ -126,6 +127,8 @@ class CharacterKeeperGame(Game):
                 character_cls = DieCharacter
             elif system == System.ASTIR:
                 character_cls = AstirCharacter
+            elif system == System.BLOODHEIST:
+                character_cls = BloodheistCharacterSheet
             else:
                 raise ValueError(f'Unknown system: {system}')
 

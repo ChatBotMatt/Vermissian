@@ -7,6 +7,7 @@ class System(enum.Enum):
     GHOST_GAME = 'get_out_run'
     GOBLIN     = 'goblin_quest'
     ASTIR      = 'astir'
+    BLOODHEIST = 'bloodheist'
 
     def __hash__(self):
         return hash(self.value)
