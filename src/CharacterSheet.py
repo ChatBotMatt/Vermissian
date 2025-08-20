@@ -80,7 +80,7 @@ class CharacterSheet(abc.ABC):
 
         for sheet_name, sheet_data in all_raw_sheet_data.items():
             if cls.is_character_sheet(sheet_data):
-                character_discord_username = sheet_data[cls.CELL_REFERENCES['biography']['discord_username']]
+                character_discord_username = sheet_data[cls.CELL_REFERENCES['biography']['discord_username']].lower()
 
                 character_name = sheet_data[cls.CELL_REFERENCES['biography']['character_name']]
 
