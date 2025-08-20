@@ -109,7 +109,7 @@ class SpireGame(ResistanceGame):
     FALLOUT_LEVELS = {
         'Severe': {
             'threshold': 9,
-            'clear': 5
+            'clear': 7
         },
         'Moderate': {
             'threshold': 5,
