@@ -119,9 +119,9 @@ Each roll will have its highest value highlighted, and its total.'''
 {bullet(code("roll 4d10, 3d6 Drop 1") + f"- Rolls {bold('3')}d10 and {bold('2')}d6, one dice dropped from each initial pool of dice. {bold('Example results:')} {{ {four_d_ten_results_drop}, {three_d_six_results_drop} }}.")}
 {bullet(code("roll 4d10, 3d6 Cut 1") + f"- Rolls 4d10 and 3d6, removing the highest rolled result from each. {bold('Example results:')} {{ {four_d_ten_results_cut}, {three_d_six_results_cut} }}.")}
 {bullet(code("roll 4d10 Drop 1 Cut 1") + f"- Rolls {bold('3')}d10 and removing the highest rolled result. {bold('Example results:')} {{ {four_d_ten_results_drop_cut} }}.")}
-{bullet(code("roll 4d10 + 3") + f"- Rolls 4d10 and adds 3 to the {bold('total')} value of the 4d10 rolled. {bold('Example results:')} {{ {four_d_ten_results} + 3 }}.")}
-{bullet(code("roll 4d10 + 3, 3d6") + f"- Rolls 4d10 and adds 3 to the {bold('total')} value of the 4d10 rolled, but {bold('not')} to the 3d6. {bold('Example results:')} {{ {four_d_ten_results} + 3, {three_d_six_results} }}.")}
-{bullet(code("roll 4d10 - 3") + f"- Rolls 4d10 and subtracts 3 from the {bold('total')} value rolled. {bold('Example results:')} {{ {four_d_ten_results} - 3 }}.")}
+{bullet(code("roll 4d10 + 3") + f"- Rolls 4d10 and adds 3 to the {bold('total')} and {bold('highest')} value of the 4d10 rolled. {bold('Example results:')} {{ {four_d_ten_results} + 3 }}.")}
+{bullet(code("roll 4d10 + 3, 3d6") + f"- Rolls 4d10 and adds 3 to the {bold('total')} and {bold('highest')} value of the 4d10 rolled, but {bold('not')} to the 3d6. {bold('Example results:')} {{ {four_d_ten_results} + 3, {three_d_six_results} }}.")}
+{bullet(code("roll 4d10 - 3") + f"- Rolls 4d10 and subtracts 3 from the {bold('total')} and {bold('highest')} value rolled. {bold('Example results:')} {{ {four_d_ten_results} - 3 }}.")}
 {bullet(code("roll 4d10 ? Seduce the Angel") + f"- Rolls 4d10 adds the given note (everything after {code('#')} or {code('?')}) to it")}. {bold('Example results:')} (Roll to compel the Angel not to murder us) {{ {four_d_ten_results} }}'''
 
     return [
