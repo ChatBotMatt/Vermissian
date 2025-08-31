@@ -108,7 +108,7 @@ class TestCommands(unittest.TestCase):
             expected_spire_ability = Ability.from_json({
                 "class_calling": "Azurite",
                 "name": "Cut A Deal",
-                "description": "Once per session, set up a meet with an NPC who can acquire you pretty much anything available in Spire. It won\u2019t be free, though, and odds are they\u2019ll want a favour or a cut too.",
+                "description": "Once per session, set up a meet with an NPC who can acquire you pretty much anything available in Spire. It won't be free, though, and odds are they'll want a favour or a cut too.",
                 "source": "Core Book",
                 "tier": "Core"
             })
@@ -125,7 +125,7 @@ class TestCommands(unittest.TestCase):
             expected_heart_ability = Ability.from_json({
                 "class_calling": "Cleaver",
                 "name": "Heartsblood",
-                "description": "Your minimum protection value for all resistances is equal to the tier of the Heart you are currently on. This value doesn\u2019t add to other sources of protection, but your base protection can\u2019t be lower than your current tier unless you specifically lose access to it due to fallout.",
+                "description": "Your minimum protection value for all resistances is equal to the tier of the Heart you are currently on. This value doesn't add to other sources of protection, but your base protection can't be lower than your current tier unless you specifically lose access to it due to fallout.",
                 "source": "Core Book",
                 "tier": "Core"
             })
@@ -143,7 +143,7 @@ class TestCommands(unittest.TestCase):
             expected_spire_ability = Ability.from_json({
                 "class_calling": "Shadow Agent",
                 "name": "Sacrifice",
-                "description": "You can \u201ckill\u201d a cover \u2013 removing access to it \u2013 by sacrificing it upon an altar to Our Hidden Mistress in a night-long ritual. When you do so, clear all your current stress and any fallout you suffered whilst inhabiting the cover. If it\u2019s unclear what fallout you suffered when you were inhabiting the cover, the fallout stays with you.",
+                "description": "You can \"kill\" a cover - removing access to it - by sacrificing it upon an altar to Our Hidden Mistress in a night-long ritual. When you do so, clear all your current stress and any fallout you suffered whilst inhabiting the cover. If it's unclear what fallout you suffered when you were inhabiting the cover, the fallout stays with you.",
                 "source": "Strata",
                 "tier": "Medium"
             })
@@ -151,7 +151,7 @@ class TestCommands(unittest.TestCase):
             expected_heart_ability = Ability.from_json({
                 "class_calling": "Junk Mage",
                 "name": "Sacrifice",
-                "description": "Before you cast a spell from this class, you can opt to destroy a resource with the Occult domain.\n\nRoll the resource\u2019s dice; the amount rolled is added to your Protection value against any stress incurred as a result of casting the spell.",
+                "description": "Before you cast a spell from this class, you can opt to destroy a resource with the Occult domain.\n\nRoll the resource's dice; the amount rolled is added to your Protection value against any stress incurred as a result of casting the spell.",
                 "source": "Core Book",
                 "tier": "Core"
             })

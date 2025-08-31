@@ -162,83 +162,101 @@ def offset_reference(reference: str, column_offset: int, row_offset: int) -> str
 
 def get_from_spreadsheet_api(
     spreadsheet_id: str,
-    raw_sheet_name_data: Dict[str, Union[str, List[str]]]
+    raw_sheet_name_data: Dict[str, Union[str, List[str]]],
+    raw_sheet_gid_data: Optional[Dict[int, Union[str, List[str]]]] = None,
 ) -> Dict[str, Dict[str, Optional[Union[str, int, float]]]]:
     logger = get_logger()
 
-    all_ranges_or_cells = []
-
-    for sheet_name, raw_ranges_or_cells in raw_sheet_name_data.items():
-        sheet_name = sheet_name.replace('/', '%2F') # Doesn't get encoded properly otherwise. # TODO Test?
-
-        if isinstance(raw_ranges_or_cells, list):
-            for raw_range_or_cell in raw_ranges_or_cells:
-                check_is_valid_range_or_cell(raw_range_or_cell)
-
-                all_ranges_or_cells.append(f'{sheet_name}!{raw_range_or_cell}')
-        elif isinstance(raw_ranges_or_cells, str):
-            check_is_valid_range_or_cell(raw_ranges_or_cells)
-
-            all_ranges_or_cells.append(f'{sheet_name}!{raw_ranges_or_cells}')
-        else:
-            raise ValueError(f'Non-str non-list ranges_or_cells "{raw_ranges_or_cells}" inside "{sheet_name}" cannot be passed in.')
-
-    if len(all_ranges_or_cells) == 0:
-        raise ValueError(f'Must pass at least one range or cell to query.')
-
-    start_time = time.time()
-
-    key = get_key()
-
     try:
-        if len(all_ranges_or_cells) == 1:
-            url = f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{all_ranges_or_cells[0]}?key={key}'
-        else:
-            range_expression_tokens = []
+        all_ranges_or_cells = []
 
-            for range_or_cell in all_ranges_or_cells:
-                range_expression_tokens.append(f'ranges={range_or_cell}')
+        for sheet_name, raw_ranges_or_cells in raw_sheet_name_data.items():
+            sheet_name = sheet_name.replace('/', '%2F') # Doesn't get encoded properly otherwise. # TODO Test?
 
-            range_expression = '&'.join(range_expression_tokens)
+            if isinstance(raw_ranges_or_cells, list):
+                for raw_range_or_cell in raw_ranges_or_cells:
+                    check_is_valid_range_or_cell(raw_range_or_cell)
 
-            url = f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchGet?key={key}&{range_expression}'
+                    all_ranges_or_cells.append(f'{sheet_name}!{raw_range_or_cell}')
+            elif isinstance(raw_ranges_or_cells, str):
+                check_is_valid_range_or_cell(raw_ranges_or_cells)
 
-        logger.info(url)
-
-        response = requests.get(url)
-
-        check_response(response, spreadsheet_id)
-
-        logger.debug(f'Duration: {time.time() - start_time}')
-
-        response_json = response.json()
-
-        if len(all_ranges_or_cells) == 1:
-            raw_response_data = [ response_json ]
-        else:
-            raw_response_data = response_json['valueRanges']
-
-        response_data = collections.defaultdict(dict)
-        for sheet_range_or_cell, response_datum in zip(all_ranges_or_cells, raw_response_data):
-            sheet_name, range_or_cell = sheet_range_or_cell.split('!')
-
-            sheet_name = sheet_name.replace('%2F', '/')
-
-            if 'values' in response_datum:
-                is_range = ( ':' in range_or_cell )
-
-                if is_range:
-                    response_data[sheet_name][range_or_cell] = response_datum['values']
-                else:
-                    response_data[sheet_name][range_or_cell] = response_datum['values'][0][0]
+                all_ranges_or_cells.append(f'{sheet_name}!{raw_ranges_or_cells}')
             else:
-                response_data[sheet_name][range_or_cell] = None
+                raise ValueError(f'Non-str non-list ranges_or_cells "{raw_ranges_or_cells}" inside "{sheet_name}" cannot be passed in.')
 
-        logger.info(url, response_json, response_data)
+        if len(all_ranges_or_cells) == 0:
+            raise ValueError(f'Must pass at least one range or cell to query.')
 
-        return response_data
+        start_time = time.time()
 
-    except requests.HTTPError as h:
-        logger.error(h, exc_info=True)
+        key = get_key()
 
-        raise h
+        try:
+            if len(all_ranges_or_cells) == 1:
+                url = f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{all_ranges_or_cells[0]}?key={key}'
+            else:
+                range_expression_tokens = []
+
+                for range_or_cell in all_ranges_or_cells:
+                    range_expression_tokens.append(f'ranges={range_or_cell}')
+
+                range_expression = '&'.join(range_expression_tokens)
+
+                url = f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values:batchGet?key={key}&{range_expression}'
+
+            logger.info(url)
+
+            response = requests.get(url)
+
+            check_response(response, spreadsheet_id)
+
+            logger.debug(f'Duration: {time.time() - start_time}')
+
+            response_json = response.json()
+
+            if len(all_ranges_or_cells) == 1:
+                raw_response_data = [ response_json ]
+            else:
+                raw_response_data = response_json['valueRanges']
+
+            response_data = collections.defaultdict(dict)
+            for sheet_range_or_cell, response_datum in zip(all_ranges_or_cells, raw_response_data):
+                sheet_name, range_or_cell = sheet_range_or_cell.split('!')
+
+                sheet_name = sheet_name.replace('%2F', '/')
+
+                if 'values' in response_datum:
+                    is_range = ( ':' in range_or_cell )
+
+                    if is_range:
+                        response_data[sheet_name][range_or_cell] = response_datum['values']
+                    else:
+                        response_data[sheet_name][range_or_cell] = response_datum['values'][0][0]
+                else:
+                    response_data[sheet_name][range_or_cell] = None
+
+            logger.info(f'URL: {url}, Response: {response_json}, Data: {response_data}')
+
+            return response_data
+
+        except requests.HTTPError as h:
+            logger.error(h, exc_info=True)
+            if 'response' in locals():
+                logger.error(response.json())
+
+            raise h
+    except Exception as e:
+        if raw_sheet_gid_data is None:
+            raise e
+        else:
+            logger.debug(f'Experienced error {e}, retrying with GID', exc_info=True)
+
+            from_gid_raw_sheet_name_data = { # TODO: This needs testing
+                get_sheet_name_from_gid(spreadsheet_id=spreadsheet_id, gid=gid, force=True): ranges_or_cells for gid, ranges_or_cells in raw_sheet_gid_data.items()
+            }
+
+            return get_from_spreadsheet_api(spreadsheet_id=spreadsheet_id, raw_sheet_name_data=from_gid_raw_sheet_name_data)
+
+
+

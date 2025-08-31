@@ -291,8 +291,8 @@ class SpireGame(ResistanceGame):
 
         return downgrade_map
 
-    def create_character(self, spreadsheet_id: str, sheet_name: str) -> SpireCharacter:
-        return SpireCharacter(spreadsheet_id, sheet_name)
+    def create_character(self, spreadsheet_id: str, sheet_name: str, sheet_gid: int) -> SpireCharacter:
+        return SpireCharacter(spreadsheet_id, sheet_name, sheet_gid=sheet_gid)
 
     @staticmethod
     def from_data(game_data: Dict[str, Any]) -> 'SpireGame':
@@ -543,8 +543,8 @@ class HeartGame(ResistanceGame):
 
             return cls.CORE_RESULTS[1]
 
-    def create_character(self, spreadsheet_id: str, sheet_name: str) -> HeartCharacter:
-        return HeartCharacter(spreadsheet_id, sheet_name)
+    def create_character(self, spreadsheet_id: str, sheet_name: str, sheet_gid: int) -> HeartCharacter:
+        return HeartCharacter(spreadsheet_id, sheet_name, sheet_gid=sheet_gid)
 
     @staticmethod
     def from_data(game_data: Dict[str, Any]) -> 'HeartGame':

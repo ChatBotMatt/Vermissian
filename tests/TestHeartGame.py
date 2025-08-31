@@ -25,13 +25,15 @@ class TestHeartGame(unittest.TestCase):
                 "discord_username": DISCORD_USERNAME,
                 "character_name": "Gruffle McStiltskin (she / her)",
                 "spreadsheet_id": "1Hzxegn3Z9EHHeYCp98vQQUCtTmsgrhf9-kfjP2AYZnk",
-                "sheet_name": "Example Character Sheet"
+                "sheet_name": "Example Character Sheet",
+                "sheet_gid": 123,
             },
             OTHER_DISCORD_USERNAME: {
                 "discord_username": OTHER_DISCORD_USERNAME,
                 "character_name": "Placeholder Character",
                 "spreadsheet_id": "1Hzxegn3Z9EHHeYCp98vQQUCtTmsgrhf9-kfjP2AYZnk",
-                "sheet_name": "Placeholder Sheet"
+                "sheet_name": "Placeholder Sheet",
+                "sheet_gid": 456,
             }
         }
     }
@@ -359,7 +361,8 @@ class TestHeartGame(unittest.TestCase):
 
         created_character = game.create_character(
             character_data['spreadsheet_id'],
-            character_data['sheet_name']
+            character_data['sheet_name'],
+            character_data['sheet_gid']
         )
 
         with self.subTest('Character data is correct'):
@@ -375,7 +378,8 @@ class TestHeartGame(unittest.TestCase):
         with self.assertRaises(requests.HTTPError):
             game.create_character(
                 invalid_character_data['spreadsheet_id'],
-                invalid_character_data['sheet_name']
+                invalid_character_data['sheet_name'],
+                invalid_character_data['sheet_gid']
             )
 
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')

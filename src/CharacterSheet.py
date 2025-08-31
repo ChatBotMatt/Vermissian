@@ -8,9 +8,10 @@ class CharacterSheet(abc.ABC):
 
     CELL_REFERENCES = {}
 
-    def __init__(self, spreadsheet_id: str, sheet_name: str, character_name: Optional[str] = None, discord_username: Optional[str] = None, query: bool = True):
+    def __init__(self, spreadsheet_id: str, sheet_name: str, sheet_gid: Optional[int] = None, character_name: Optional[str] = None, discord_username: Optional[str] = None, query: bool = True):
         self.spreadsheet_id = spreadsheet_id
         self.sheet_name = sheet_name
+        self.sheet_gid = sheet_gid
 
         if query and (character_name is None or discord_username is None):
             live_character_name, live_discord_username = self.initialise()
@@ -53,6 +54,7 @@ class CharacterSheet(abc.ABC):
             'discord_username': self.discord_username,
             'character_name': self.character_name,
             'spreadsheet_id': self.spreadsheet_id,
+            'sheet_gid': self.sheet_gid,
             'sheet_name': self.sheet_name
         }
 
@@ -62,7 +64,7 @@ class CharacterSheet(abc.ABC):
         raise NotImplementedError('Implement Me')
 
     @classmethod
-    def bulk_create(cls, spreadsheet_id: str, sheet_names: List[str]) -> Dict[str, 'CharacterSheet']:
+    def bulk_create(cls, spreadsheet_id: str, sheet_names: List[str], sheet_gids: List[int]) -> Dict[str, 'CharacterSheet']:
         raw_sheet_name_data_to_query = {
             sheet_name: [
                 cls.CELL_REFERENCES['name_label'],
@@ -78,15 +80,18 @@ class CharacterSheet(abc.ABC):
 
         valid_characters = {}
 
-        for sheet_name, sheet_data in all_raw_sheet_data.items():
+        for sheet_index, (sheet_name, sheet_data) in enumerate(all_raw_sheet_data.items()):
             if cls.is_character_sheet(sheet_data):
-                character_discord_username = sheet_data[cls.CELL_REFERENCES['biography']['discord_username']].lower()
+                character_discord_username = sheet_data[cls.CELL_REFERENCES['biography']['discord_username']]
+                if character_discord_username is not None:
+                    character_discord_username = character_discord_username.lower()
 
                 character_name = sheet_data[cls.CELL_REFERENCES['biography']['character_name']]
 
                 valid_characters[sheet_name] = cls(
                     spreadsheet_id=spreadsheet_id,
                     sheet_name=sheet_name,
+                    sheet_gid=sheet_gids[sheet_index],
                     discord_username=character_discord_username,
                     character_name=character_name,
                     query=False # If they don't have the names, they won't have them now either.
@@ -112,4 +117,4 @@ class CharacterSheet(abc.ABC):
         character_name = self.character_name or '[Unnamed Character]'
         discord_username = self.discord_username or '[Unknown User]'
 
-        return f'{character_name} is a {self.__class__} linked to {discord_username} from Spreadsheet {self.spreadsheet_id} Sheet {self.sheet_name}'
+        return f'{character_name} is a {self.__class__} linked to {discord_username} from Spreadsheet {self.spreadsheet_id} Sheet {self.sheet_name} / {self.sheet_gid}'

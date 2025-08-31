@@ -45,7 +45,7 @@ class TestCharacterSheet(abc.ABC):
         with self.subTest('Valid Character'):
             mock_get.return_value = valid_response
 
-            unnamed_character = self.character_sheet_cls(spreadsheet_id='abc', sheet_name=self.example_sheet_name)
+            unnamed_character = self.character_sheet_cls(spreadsheet_id='abc', sheet_name=self.example_sheet_name, sheet_gid=123)
 
             with self.subTest('Mock used'):
                 self.assertTrue(mock_get.called)
@@ -77,7 +77,7 @@ class TestCharacterSheet(abc.ABC):
                 self.assertRaises(
                     ValueError,
                     SpireCharacter,
-                    self.valid_spreadsheet_id, self.example_sheet_name
+                    self.valid_spreadsheet_id, self.example_sheet_name, 123
                 )
 
             with self.subTest('Mock used'):
@@ -136,7 +136,8 @@ class TestCharacterSheet(abc.ABC):
 
         created_characters = self.valid_unnamed_character.__class__.bulk_create(
             self.valid_spreadsheet_id,
-            sheet_names=[character.sheet_name for character in expected_characters]
+            sheet_names=[character.sheet_name for character in expected_characters],
+            sheet_gids=[self.valid_sheet_gid, self.other_valid_sheet_gid]
         )
 
         with self.subTest('Mock Get used'):
@@ -156,7 +157,8 @@ class TestCharacterSheet(abc.ABC):
 
             self.assertEqual(
                 expected_character,
-                created_characters[expected_character.sheet_name]
+                created_characters[expected_character.sheet_name],
+                f'Not equal: {expected_character.info()}, {created_characters[expected_character.sheet_name].info()}'
             )
 
         mock_content_with_invalid = {
@@ -174,7 +176,8 @@ class TestCharacterSheet(abc.ABC):
 
         created_characters = self.valid_unnamed_character.__class__.bulk_create(
             self.valid_spreadsheet_id,
-            sheet_names=[ * [character.sheet_name for character in expected_characters], 'Character 2' ]
+            sheet_names=[ * [character.sheet_name for character in expected_characters], 'Character 2' ],
+            sheet_gids=[ 123, 456, 789 ]
         )
 
         with self.subTest('Mock Get used'):
@@ -193,7 +196,8 @@ class TestCharacterSheet(abc.ABC):
                 'discord_username': self.valid_unnamed_character.discord_username,
                 'character_name': self.valid_unnamed_character.character_name,
                 'spreadsheet_id': self.valid_unnamed_character.spreadsheet_id,
-                'sheet_name': self.valid_unnamed_character.sheet_name
+                'sheet_name': self.valid_unnamed_character.sheet_name,
+                'sheet_gid': self.valid_unnamed_character.sheet_gid
             }
         )
 
@@ -201,6 +205,8 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
     valid_spreadsheet_id = '1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I'
     valid_sheet_name = 'Example Character Sheet'
     other_valid_sheet_name = 'Character 1'
+    valid_sheet_gid = 123
+    other_valid_sheet_gid = 456
 
     character_sheet_cls = SpireCharacter
 
@@ -253,7 +259,8 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
             'discord_username': self.valid_unnamed_character.discord_username,
             'character_name': self.valid_unnamed_character.character_name,
             'spreadsheet_id': self.valid_unnamed_character.spreadsheet_id,
-            'sheet_name': self.valid_unnamed_character.sheet_name
+            'sheet_name': self.valid_unnamed_character.sheet_name,
+            'sheet_gid': self.valid_unnamed_character.sheet_gid
         }
 
         with self.subTest('Load unnamed character, given named info'):
@@ -266,7 +273,8 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
             'discord_username': None,
             'character_name': None,
             'spreadsheet_id': self.valid_unnamed_character.spreadsheet_id,
-            'sheet_name': self.valid_unnamed_character.sheet_name
+            'sheet_name': self.valid_unnamed_character.sheet_name,
+            'sheet_gid': self.valid_unnamed_character.sheet_gid
         }
 
         mock_initialise.return_value = self.valid_unnamed_character.character_name, self.valid_unnamed_character.discord_username
@@ -292,7 +300,8 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
                 spreadsheet_id=self.valid_unnamed_character.spreadsheet_id,
                 sheet_name=self.valid_unnamed_character.sheet_name,
                 character_name=self.valid_unnamed_character.character_name,
-                discord_username=self.valid_unnamed_character.discord_username
+                discord_username=self.valid_unnamed_character.discord_username,
+                sheet_gid=self.valid_unnamed_character.sheet_gid
             )
 
             self.assertEqual(
@@ -311,17 +320,18 @@ class TestSpireCharacter(TestCharacterSheet, unittest.TestCase):
         logging.disable(logging.ERROR)
 
         self.test_character_name = 'Test Character Name'
-        self.test_discord_username = 'Test Discord Username'
+        self.test_discord_username = 'test discord username'
 
         mock_initialise.return_value = self.test_character_name, self.test_discord_username
 
-        self.valid_unnamed_character = SpireCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name)
+        self.valid_unnamed_character = SpireCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name, sheet_gid=self.valid_sheet_gid)
 
         self.valid_named_character = SpireCharacter(
             spreadsheet_id=self.valid_spreadsheet_id,
             sheet_name=self.other_valid_sheet_name,
             character_name=self.test_character_name,
-            discord_username=self.test_discord_username
+            discord_username=self.test_discord_username,
+            sheet_gid=self.other_valid_sheet_gid
         )
 
         self.skills = [skill for skill in SpireSkill]
@@ -333,6 +343,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
     valid_spreadsheet_id = '1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY'
     valid_sheet_name = 'Example Character Sheet'
     other_valid_sheet_name = 'Character 1'
+    valid_sheet_gid = 123
+    other_valid_sheet_gid = 456
 
     character_sheet_cls = HeartCharacter
 
@@ -370,7 +382,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
             'discord_username': self.valid_unnamed_character.discord_username,
             'character_name': self.valid_unnamed_character.character_name,
             'spreadsheet_id': self.valid_unnamed_character.spreadsheet_id,
-            'sheet_name': self.valid_unnamed_character.sheet_name
+            'sheet_name': self.valid_unnamed_character.sheet_name,
+            'sheet_gid': self.valid_unnamed_character.sheet_gid,
         }
 
         with self.subTest('Load unnamed character, given named info'):
@@ -383,7 +396,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
             'discord_username': None,
             'character_name': None,
             'spreadsheet_id': self.valid_unnamed_character.spreadsheet_id,
-            'sheet_name': self.valid_unnamed_character.sheet_name
+            'sheet_name': self.valid_unnamed_character.sheet_name,
+            'sheet_gid': self.valid_sheet_gid,
         }
 
         mock_initialise.return_value = self.valid_unnamed_character.character_name, self.valid_unnamed_character.discord_username
@@ -409,7 +423,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
                 spreadsheet_id=self.valid_unnamed_character.spreadsheet_id,
                 sheet_name=self.valid_unnamed_character.sheet_name,
                 character_name=self.valid_unnamed_character.character_name,
-                discord_username=self.valid_unnamed_character.discord_username
+                discord_username=self.valid_unnamed_character.discord_username,
+                sheet_gid=self.valid_sheet_gid
             )
 
             self.assertEqual(
@@ -420,7 +435,8 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
         with self.subTest('Non-identical Characters'):
             self.assertNotEqual(
                 self.valid_unnamed_character,
-                self.valid_named_character
+                self.valid_named_character,
+
             )
 
     @unittest.mock.patch('src.vermissian.ResistanceCharacterSheet.HeartCharacter.initialise')
@@ -428,17 +444,18 @@ class TestHeartCharacter(TestCharacterSheet, unittest.TestCase):
         logging.disable(logging.ERROR)
 
         self.test_character_name = 'Test Character Name'
-        self.test_discord_username = 'Test Discord Username'
+        self.test_discord_username = 'test discord username'
 
         mock_initialise.return_value = self.test_character_name, self.test_discord_username
 
-        self.valid_unnamed_character = HeartCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name)
+        self.valid_unnamed_character = HeartCharacter(spreadsheet_id=self.valid_spreadsheet_id, sheet_name=self.valid_sheet_name, sheet_gid=self.valid_sheet_gid)
 
         self.valid_named_character = HeartCharacter(
             spreadsheet_id=self.valid_spreadsheet_id,
             sheet_name=self.other_valid_sheet_name,
             character_name=self.test_character_name,
-            discord_username=self.test_discord_username
+            discord_username=self.test_discord_username,
+            sheet_gid=self.other_valid_sheet_gid
         )
 
         self.skills = [skill for skill in HeartSkill]

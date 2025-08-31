@@ -19,7 +19,7 @@ class TestVermissian(unittest.TestCase):
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
     def test_create_game(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_get_from_spreadsheet_api: unittest.mock.Mock):
         mock_get_spreadsheet_metadata.return_value = {
-            0: 'Example Character Sheet'
+            123: 'Example Character Sheet'
         }
 
         self.assert_no_games()
@@ -44,7 +44,8 @@ class TestVermissian(unittest.TestCase):
                 with self.subTest(f'Game created - {game_label}'):
                     self.assertEqual(
                         self.vermissian.games[game_data['guild_id']],
-                        game_data['game']
+                        game_data['game'],
+                        f'Games not equal: {self.vermissian.games[game_data["guild_id"]].game_data}, {game_data["game"].game_data}'
                     )
 
                 self.vermissian.remove_game(game_data['guild_id'])
@@ -194,6 +195,7 @@ class TestVermissian(unittest.TestCase):
                 'valid_sheet_name': 'Example Character Sheet',
                 'valid_spreadsheet_url': 'https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit#gid=0',
                 'invalid_spreadsheet_url': 'abc',
+                'valid_sheet_gid': 123,
                 'system': System.SPIRE,
                 'less_lethal': False
             },
@@ -203,6 +205,7 @@ class TestVermissian(unittest.TestCase):
                 'valid_sheet_name': 'Character 1',
                 'valid_spreadsheet_url': 'https://docs.google.com/spreadsheets/d/1uW0RnR9O_zgKi1qj4Qjw3BzpZ2zU0zWyoa0Sw7lIdWw/edit?usp=sharing',
                 'invalid_spreadsheet_url': 'abc',
+                'valid_sheet_gid': 123,
                 'system': System.SPIRE,
                 'less_lethal': False
             },
@@ -212,6 +215,7 @@ class TestVermissian(unittest.TestCase):
                 'valid_sheet_name': 'Example Character Sheet',
                 'valid_spreadsheet_url': 'https://docs.google.com/spreadsheets/d/1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I/edit#gid=0',
                 'invalid_spreadsheet_url': 'abc',
+                'valid_sheet_gid': 123,
                 'system': System.SPIRE,
                 'less_lethal': True
             },
@@ -221,6 +225,7 @@ class TestVermissian(unittest.TestCase):
                 'valid_sheet_name': 'Example Character Sheet',
                 'valid_spreadsheet_url': 'https://docs.google.com/spreadsheets/d/1PzF3ZHQpXXaS0ci0Q0vbE9uHpC26GiUJ4ishIbbcpOY/edit#gid=0',
                 'invalid_spreadsheet_url': 'abc',
+                'valid_sheet_gid': 123,
                 'system': System.HEART,
                 'less_lethal': False
             },
@@ -230,6 +235,7 @@ class TestVermissian(unittest.TestCase):
                 'valid_sheet_name': 'Character 1',
                 'valid_spreadsheet_url': 'https://docs.google.com/spreadsheets/d/1yWC4husblNB7Rd_l6xU2BqbquwpCeNZVn8NACSrqTzs/edit#gid=282110671',
                 'invalid_spreadsheet_url': 'abc',
+                'valid_sheet_gid': 123,
                 'system': System.HEART,
                 'less_lethal': False
             }
@@ -260,7 +266,8 @@ class TestVermissian(unittest.TestCase):
                         character_name='Azuro (he / him)',
                         discord_username='jaffa6',
                         spreadsheet_id=game_data['valid_spreadsheet_id'],
-                        sheet_name=game_data['valid_sheet_name']
+                        sheet_name=game_data['valid_sheet_name'],
+                        sheet_gid=game_data['valid_sheet_gid'],
                     )
                 ]
             else:
@@ -269,7 +276,8 @@ class TestVermissian(unittest.TestCase):
                         character_name='Gruffle McStiltskin (she / her)',
                         discord_username='jaffa6',
                         spreadsheet_id=game_data['valid_spreadsheet_id'],
-                        sheet_name=game_data['valid_sheet_name']
+                        sheet_name=game_data['valid_sheet_name'],
+                        sheet_gid=game_data['valid_sheet_gid'],
                     )
                 ]
 

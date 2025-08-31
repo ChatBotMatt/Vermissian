@@ -27,13 +27,15 @@ class TestSpireGame(unittest.TestCase):
                 "discord_username": DISCORD_USERNAME,
                 "character_name": "Azuro (he / him)",
                 "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
-                "sheet_name": "Example Character Sheet"
+                "sheet_name": "Example Character Sheet",
+                "sheet_gid": 123,
             },
             OTHER_DISCORD_USERNAME: {
                 "discord_username": OTHER_DISCORD_USERNAME,
                 "character_name": "Placeholder Character",
                 "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
-                "sheet_name": "Placeholder Sheet"
+                "sheet_name": "Placeholder Sheet",
+                "sheet_gid": 456,
             }
         }
     }
@@ -418,7 +420,7 @@ class TestSpireGame(unittest.TestCase):
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
     def test_create_character(self, mock_get_spreadsheet_metadata: unittest.mock.Mock, mock_initialise: unittest.mock.Mock):
         mock_get_spreadsheet_metadata.return_value = {
-            0: 'Example Character Sheet'
+            123: 'Example Character Sheet'
         }
 
         mock_initialise.return_value = self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]['character_name'], self.SPIRE_GAME_DATA['characters'][self.DISCORD_USERNAME]['discord_username']
@@ -433,7 +435,8 @@ class TestSpireGame(unittest.TestCase):
 
         created_character = game.create_character(
             character_data['spreadsheet_id'],
-            character_data['sheet_name']
+            character_data['sheet_name'],
+            character_data['sheet_gid']
         )
 
         with self.subTest('Character data is correct'):
@@ -449,7 +452,8 @@ class TestSpireGame(unittest.TestCase):
         with self.assertRaises(requests.HTTPError):
             game.create_character(
                 invalid_character_data['spreadsheet_id'],
-                invalid_character_data['sheet_name']
+                invalid_character_data['sheet_name'],
+                invalid_character_data['sheet_gid']
             )
 
     @staticmethod
@@ -467,7 +471,7 @@ class TestSpireGame(unittest.TestCase):
     @unittest.mock.patch('src.Game.get_spreadsheet_metadata')
     def setUp(self, mock_get_spreadsheet_metadata: unittest.mock.Mock) -> None:
         mock_get_spreadsheet_metadata.return_value = {
-            0: 'Example Character Sheet'
+            123: 'Example Character Sheet'
         }
 
         self.spire_game = SpireGame.from_data(self.SPIRE_GAME_DATA)
@@ -489,7 +493,8 @@ class TestSpireGame(unittest.TestCase):
                     "discord_username": "jaffa6",
                     "character_name": "Azuro (he / him)",
                     "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
-                    "sheet_name": "Example Character Sheet"
+                    "sheet_name": "Example Character Sheet",
+                    "sheet_gid": 123
                 }
             }
         }
@@ -504,7 +509,8 @@ class TestSpireGame(unittest.TestCase):
                     "discord_username": "jaffa6",
                     "character_name": "Azuro (he / him)",
                     "spreadsheet_id": "1saogmy4eNNKng32Pf39b7K3Ko4uHEuWClm7UM-7Kd8I",
-                    "sheet_name": "Example Character Sheet"
+                    "sheet_name": "Example Character Sheet",
+                    "sheet_gid": 123
                 }
             }
         }

@@ -202,7 +202,7 @@ class TestGoogleSheets(unittest.TestCase):
             }
         )
 
-        get_spreadsheet_metadata(valid_spreadsheet_id)
+        queried_spreadsheet_metadata = get_spreadsheet_metadata(valid_spreadsheet_id)
 
         with self.subTest('get_key called'):
             mock_get_key.assert_called()
@@ -212,10 +212,10 @@ class TestGoogleSheets(unittest.TestCase):
 
         with self.subTest('Metadata Call - Valid Data'):
             self.assertEqual(
-                get_spreadsheet_metadata(valid_spreadsheet_id),
+                queried_spreadsheet_metadata,
                 {
                     123: 'abc',
-                    456: 'def'
+                    456: 'def',
                 }
             )
 

@@ -117,7 +117,14 @@ class CharacterKeeperGame(Game):
         characters = [character for character in characters if character.discord_username is not None]
 
         if len(characters) == 0:
-            sheet_names_to_query = [sheet_name for sheet_name in self.spreadsheet_metadata.values() if sheet_name not in self.RESERVED_SHEET_NAMES]
+            sheet_names_to_query = []
+            sheet_gids_to_query = []
+            for sheet_gid, sheet_name in self.spreadsheet_metadata.items():
+                if sheet_name in self.RESERVED_SHEET_NAMES:
+                    continue
+
+                sheet_names_to_query.append(sheet_name)
+                sheet_gids_to_query.append(sheet_gid)
 
             if system == System.SPIRE:
                 character_cls = SpireCharacter
@@ -134,7 +141,8 @@ class CharacterKeeperGame(Game):
 
             queried_characters: Dict[str, CharacterSheet] = character_cls.bulk_create(
                 spreadsheet_id=spreadsheet_id,
-                sheet_names=sheet_names_to_query
+                sheet_names=sheet_names_to_query,
+                sheet_gids=sheet_gids_to_query,
             )
 
             for sheet_name, character in queried_characters.items():
@@ -154,7 +162,7 @@ class CharacterKeeperGame(Game):
 
         sheet_name = get_sheet_name_from_gid(spreadsheet_id, sheet_gid)
 
-        character = self.create_character(spreadsheet_id, sheet_name)
+        character = self.create_character(spreadsheet_id, sheet_name, sheet_gid)
 
         character.discord_username = username
 
@@ -169,7 +177,7 @@ class CharacterKeeperGame(Game):
         raise ValueError(f'No character linked to "{username}": Known user-characters are {list(self.character_sheets.keys())}')
 
     @abc.abstractmethod
-    def create_character(self, spreadsheet_id: str, sheet_name: str):
+    def create_character(self, spreadsheet_id: str, sheet_name: str, sheet_gid: int):
         raise NotImplementedError('Implement me!')
 
     @property
