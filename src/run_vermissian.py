@@ -174,7 +174,7 @@ async def privacy_policy_command(
 ):
     message = get_privacy_policy()
 
-    await ctx.respond(message)
+    await ctx.respond(message, ephemeral=True)
 
 @vermissian.slash_command(name='help', description='Provides help text.')
 @command_logging_decorator
