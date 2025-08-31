@@ -982,12 +982,14 @@ def get_delve_draw(expand_draws: bool = False, five_card_draw: bool = False, all
 
     return response
 
-def add_character(game: Game, discord_username: str, discord_display_name: str, character_sheet_url: str):
+def add_character(game: ResistanceGame, discord_username: str, discord_display_name: str, character_sheet_url: str):
     character = game.add_character(spreadsheet_url=character_sheet_url, username=discord_username)
 
     response = f"Added character {character.character_name} and linked them to {discord_display_name}."
 
     response = response[:2000]
+
+    game.save()
 
     return response
 

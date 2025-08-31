@@ -236,6 +236,10 @@ class Roll:
         return rolls, note
 
     def roll(self, cut_highest_first: bool) -> Tuple[List[int], List[int], List[int]]:
+        """
+        :param cut_highest_first: Whether to cut the highest-result first or not.
+        :return: The results, indices to remove, kept results.
+        """
         results = []
         indices_to_remove = []
         kept_results = []
